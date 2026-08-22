@@ -3,8 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Heart, Minus, Plus, Star, Truck } from "lucide-react";
 import { toast } from "sonner";
@@ -13,18 +12,24 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductGrid } from "@/components/products/product-grid";
-import { calculateSalePrice, formatCurrency, getDeliveryEstimate, cn } from "@/lib/utils";
-import { useUIStore, useWishlistStore } from "@/store";
+import { OriginMark } from "@/components/brand/origin-mark";
+import { FadeIn } from "@/components/ui/motion";
+import {
+  calculateSalePrice,
+  formatCurrency,
+  getDeliveryEstimate,
+  cn,
+} from "@/lib/utils";
+import { useUIStore, useWishlistStore, useGuestCartStore } from "@/store";
 
 export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const { data: session } = useSession();
-  const queryClient = useQueryClient();
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const [zoomed, setZoomed] = useState(false);
   const { triggerCartAnimation } = useUIStore();
   const { has, toggle } = useWishlistStore();
+  const addItem = useGuestCartStore((s) => s.addItem);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["product", slug],
@@ -32,32 +37,6 @@ export default function ProductDetailPage() {
       const res = await fetch(`/api/products/${slug}`);
       if (!res.ok) throw new Error("Product not found");
       return res.json();
-    },
-  });
-
-  const addToCart = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/cart", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: data.product.id, quantity: qty }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed");
-      return json;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-      triggerCartAnimation();
-      toast.success("Added to cart");
-    },
-    onError: (err: Error) => {
-      if (err.message === "UNAUTHORIZED") {
-        toast.error("Please sign in");
-        window.location.href = `/login?callbackUrl=/products/${slug}`;
-        return;
-      }
-      toast.error(err.message);
     },
   });
 
@@ -88,19 +67,12 @@ export default function ProductDetailPage() {
   const product = data.product;
   const salePrice = calculateSalePrice(product.price, product.discount);
   const wished = has(product.id);
+  const hasStory = Boolean(product.story || product.whyMade || product.howMade);
 
-  const toggleWishlist = async () => {
-    if (!session) {
-      toast.error("Please sign in");
-      window.location.href = `/login?callbackUrl=/products/${slug}`;
-      return;
-    }
-    toggle(product.id);
-    await fetch("/api/wishlist", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: product.id }),
-    });
+  const addToCart = () => {
+    addItem(product, qty);
+    triggerCartAnimation();
+    toast.success("Added to cart");
   };
 
   return (
@@ -146,8 +118,10 @@ export default function ProductDetailPage() {
         </div>
 
         <div>
+          <OriginMark className="mb-3" />
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
             {product.artisan}
+            {product.category?.name ? ` · ${product.category.name}` : ""}
           </p>
           <h1 className="mt-2 font-display text-4xl leading-tight sm:text-5xl">
             {product.title}
@@ -193,13 +167,12 @@ export default function ProductDetailPage() {
             </p>
           </div>
 
-          {product.story && (
-            <div className="mt-8">
-              <h2 className="font-display text-2xl">The artisan story</h2>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {product.story}
-              </p>
-            </div>
+          {hasStory && (
+            <p className="mt-6 text-sm">
+              <a href="#story" className="text-accent underline-offset-4 hover:underline">
+                Read the story behind this piece
+              </a>
+            </p>
           )}
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -220,20 +193,64 @@ export default function ProductDetailPage() {
                 <Plus className="h-4 w-4" />
               </button>
             </div>
-            <Button
-              size="lg"
-              disabled={product.stock < 1 || addToCart.isPending}
-              onClick={() => addToCart.mutate()}
-            >
+            <Button size="lg" disabled={product.stock < 1} onClick={addToCart}>
               {product.stock < 1 ? "Out of stock" : "Add to cart"}
             </Button>
-            <Button size="lg" variant="outline" onClick={toggleWishlist}>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => {
+                toggle(product.id);
+                toast.success(wished ? "Removed from wishlist" : "Saved to wishlist");
+              }}
+            >
               <Heart className={cn("h-4 w-4", wished && "fill-accent text-accent")} />
               Wishlist
             </Button>
           </div>
         </div>
       </div>
+
+      {hasStory && (
+        <>
+          <Separator className="my-16" />
+          <section id="story" className="mx-auto max-w-3xl scroll-mt-28">
+            <FadeIn>
+              <OriginMark className="mb-4" />
+              <h2 className="font-display text-3xl sm:text-4xl">
+                The story behind this piece
+              </h2>
+              {product.story && (
+                <p className="mt-4 text-lg leading-relaxed text-foreground/90">
+                  {product.story}
+                </p>
+              )}
+            </FadeIn>
+            <div className="mt-10 grid gap-10 sm:grid-cols-2">
+              {product.whyMade && (
+                <FadeIn delay={0.08}>
+                  <p className="text-xs uppercase tracking-[0.22em] text-accent">
+                    Why it was made
+                  </p>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {product.whyMade}
+                  </p>
+                </FadeIn>
+              )}
+              {product.howMade && (
+                <FadeIn delay={0.16}>
+                  <p className="text-xs uppercase tracking-[0.22em] text-accent">
+                    How it was made
+                  </p>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {product.howMade}
+                  </p>
+                </FadeIn>
+              )}
+            </div>
+          </section>
+        </>
+      )}
 
       <Separator className="my-16" />
 

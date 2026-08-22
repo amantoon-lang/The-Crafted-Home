@@ -1,52 +1,63 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { serializeProduct } from "@/types";
+import {
+  loadCatalog,
+  getCatalogProduct,
+  getRelatedProducts,
+} from "@/data/catalog";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const product = await prisma.product.findUnique({
-    where: { slug },
-    include: {
-      category: { select: { name: true, slug: true } },
-      reviews: {
-        include: { user: { select: { name: true, image: true } } },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-      },
-    },
-  });
+  const catalog = await loadCatalog();
+  const product = getCatalogProduct(catalog, slug);
 
   if (!product) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
 
-  const related = await prisma.product.findMany({
-    where: {
-      categoryId: product.categoryId,
-      NOT: { id: product.id },
-    },
-    take: 4,
-    include: { category: { select: { name: true, slug: true } } },
-  });
+  const related = getRelatedProducts(catalog, product).map((p) => ({
+    id: p.id,
+    title: p.title,
+    slug: p.slug,
+    price: p.price,
+    discount: p.discount,
+    images: p.images,
+    artisan: p.artisan,
+    rating: p.rating,
+    reviewCount: p.reviewCount,
+    stock: p.stock,
+    category: p.category,
+    featured: p.featured,
+    trending: p.trending,
+    bestSeller: p.bestSeller,
+  }));
 
   return NextResponse.json({
     product: {
-      ...serializeProduct(product),
+      id: product.id,
+      title: product.title,
+      slug: product.slug,
+      price: product.price,
+      discount: product.discount,
+      images: product.images,
+      artisan: product.artisan,
+      rating: product.rating,
+      reviewCount: product.reviewCount,
+      stock: product.stock,
+      category: product.category,
+      featured: product.featured,
+      trending: product.trending,
+      bestSeller: product.bestSeller,
       description: product.description,
       story: product.story,
+      whyMade: product.whyMade || "",
+      howMade: product.howMade || "",
       materials: product.materials,
       dimensions: product.dimensions,
-      reviews: product.reviews.map((r) => ({
-        id: r.id,
-        rating: r.rating,
-        comment: r.comment,
-        createdAt: r.createdAt,
-        user: r.user,
-      })),
+      reviews: product.reviews,
     },
-    related: related.map(serializeProduct),
+    related,
   });
 }

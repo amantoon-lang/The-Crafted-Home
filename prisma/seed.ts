@@ -4,13 +4,10 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 const categories = [
-  { name: "Wooden Decor", slug: "wooden-decor", image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80" },
-  { name: "Macrame", slug: "macrame", image: "https://images.unsplash.com/photo-1602028915047-37209f1fd8c6?w=800&q=80" },
   { name: "Ceramics", slug: "ceramics", image: "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&q=80" },
-  { name: "Wall Art", slug: "wall-art", image: "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=800&q=80" },
-  { name: "Candles", slug: "candles", image: "https://images.unsplash.com/photo-1603006905004-abd84d2429d2?w=800&q=80" },
-  { name: "Planters", slug: "planters", image: "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=800&q=80" },
-  { name: "Kitchen Decor", slug: "kitchen-decor", image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80" },
+  { name: "Textiles", slug: "textiles", image: "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=800&q=80" },
+  { name: "Wood", slug: "wood", image: "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80" },
+  { name: "Light & Scent", slug: "light-scent", image: "https://images.unsplash.com/photo-1603006905004-abd84d2429d2?w=800&q=80" },
 ];
 
 const products = [
@@ -36,7 +33,7 @@ const products = [
     featured: true,
     trending: true,
     bestSeller: true,
-    categorySlug: "wooden-decor",
+    categorySlug: "wood",
   },
   {
     title: "Linen Wall Macrame Tapestry",
@@ -60,7 +57,7 @@ const products = [
     featured: true,
     trending: true,
     bestSeller: false,
-    categorySlug: "macrame",
+    categorySlug: "textiles",
   },
   {
     title: "Speckled Stoneware Vase Set",
@@ -108,7 +105,7 @@ const products = [
     featured: false,
     trending: true,
     bestSeller: false,
-    categorySlug: "wall-art",
+    categorySlug: "textiles",
   },
   {
     title: "Beeswax Pillar Candle Trio",
@@ -132,7 +129,7 @@ const products = [
     featured: true,
     trending: true,
     bestSeller: true,
-    categorySlug: "candles",
+    categorySlug: "light-scent",
   },
   {
     title: "Terracotta Hanging Planter",
@@ -156,7 +153,7 @@ const products = [
     featured: false,
     trending: true,
     bestSeller: false,
-    categorySlug: "planters",
+    categorySlug: "ceramics",
   },
   {
     title: "Handwoven Linen Tea Towels",
@@ -180,7 +177,7 @@ const products = [
     featured: true,
     trending: false,
     bestSeller: true,
-    categorySlug: "kitchen-decor",
+    categorySlug: "textiles",
   },
   {
     title: "Walnut Floating Shelf",
@@ -204,7 +201,7 @@ const products = [
     featured: false,
     trending: false,
     bestSeller: true,
-    categorySlug: "wooden-decor",
+    categorySlug: "wood",
   },
   {
     title: "Ceramic Pour-Over Set",
@@ -252,7 +249,7 @@ const products = [
     featured: true,
     trending: false,
     bestSeller: false,
-    categorySlug: "wall-art",
+    categorySlug: "textiles",
   },
   {
     title: "Cedarwood Diffuser Candle",
@@ -276,7 +273,7 @@ const products = [
     featured: false,
     trending: true,
     bestSeller: true,
-    categorySlug: "candles",
+    categorySlug: "light-scent",
   },
   {
     title: "Braided Plant Hanger",
@@ -300,7 +297,7 @@ const products = [
     featured: false,
     trending: false,
     bestSeller: false,
-    categorySlug: "macrame",
+    categorySlug: "textiles",
   },
 ];
 

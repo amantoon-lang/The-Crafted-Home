@@ -1,36 +1,29 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { loadCatalog } from "@/data/catalog";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const q = searchParams.get("q")?.trim();
+  const q = searchParams.get("q")?.trim().toLowerCase();
 
   if (!q || q.length < 2) {
     return NextResponse.json({ suggestions: [] });
   }
 
-  const products = await prisma.product.findMany({
-    where: {
-      OR: [
-        { title: { contains: q, mode: "insensitive" } },
-        { artisan: { contains: q, mode: "insensitive" } },
-      ],
-    },
-    take: 8,
-    select: {
-      id: true,
-      title: true,
-      slug: true,
-      images: true,
-      price: true,
-      artisan: true,
-    },
-  });
+  const catalog = await loadCatalog();
+  const suggestions = catalog.products
+    .filter(
+      (p) =>
+        p.title.toLowerCase().includes(q) || p.artisan.toLowerCase().includes(q)
+    )
+    .slice(0, 8)
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      slug: p.slug,
+      images: p.images,
+      price: p.price,
+      artisan: p.artisan,
+    }));
 
-  return NextResponse.json({
-    suggestions: products.map((p) => ({
-      ...p,
-      price: Number(p.price),
-    })),
-  });
+  return NextResponse.json({ suggestions });
 }

@@ -2,8 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -11,13 +9,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import { calculateSalePrice, formatCurrency } from "@/lib/utils";
+import { useGuestCartStore } from "@/store";
 
 export default function CartPage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
-  const queryClient = useQueryClient();
+  const { items, updateQuantity, removeItem, subtotal } = useGuestCartStore();
   const [coupon, setCoupon] = useState("");
   const [couponData, setCouponData] = useState<{
     code: string;
@@ -25,90 +22,36 @@ export default function CartPage() {
     discountAmount?: number | null;
   } | null>(null);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["cart"],
-    queryFn: async () => {
-      const res = await fetch("/api/cart");
-      if (res.status === 401) throw new Error("UNAUTHORIZED");
-      if (!res.ok) throw new Error("Failed to load cart");
-      return res.json();
-    },
-    enabled: status === "authenticated",
-  });
-
-  const updateItem = useMutation({
-    mutationFn: async ({ itemId, quantity }: { itemId: string; quantity: number }) => {
-      const res = await fetch("/api/cart", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemId, quantity }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      return json;
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cart"] }),
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const removeItem = useMutation({
-    mutationFn: async (itemId: string) => {
-      const res = await fetch(`/api/cart?itemId=${itemId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to remove");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cart"] });
-      toast.success("Removed from cart");
-    },
-  });
-
-  if (status === "unauthenticated") {
-    return (
-      <div className="mx-auto max-w-xl px-4 py-24 text-center">
-        <h1 className="font-display text-3xl">Your cart is waiting</h1>
-        <p className="mt-3 text-muted-foreground">Sign in to view and manage your cart.</p>
-        <Button asChild className="mt-6">
-          <Link href="/login?callbackUrl=/cart">Sign in</Link>
-        </Button>
-      </div>
-    );
-  }
-
-  if (isLoading || status === "loading") {
-    return (
-      <div className="mx-auto max-w-7xl space-y-4 px-4 py-12">
-        <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-40 w-full" />
-      </div>
-    );
-  }
-
-  const items = data?.items || [];
-  const subtotal = data?.subtotal || 0;
+  const cartSubtotal = subtotal();
   let discount = 0;
   if (couponData?.discountPercent) {
-    discount = Math.round(subtotal * (couponData.discountPercent / 100) * 100) / 100;
+    discount =
+      Math.round(cartSubtotal * (couponData.discountPercent / 100) * 100) / 100;
   } else if (couponData?.discountAmount) {
     discount = couponData.discountAmount;
   }
-  const shipping = subtotal - discount >= 100 ? 0 : items.length ? 8.5 : 0;
-  const tax = Math.round(Math.max(subtotal - discount, 0) * 0.08 * 100) / 100;
-  const total = Math.round((Math.max(subtotal - discount, 0) + shipping + tax) * 100) / 100;
+  const shipping = cartSubtotal - discount >= 4999 ? 0 : items.length ? 99 : 0;
+  const tax = Math.round(Math.max(cartSubtotal - discount, 0) * 0.18);
+  const total = Math.max(cartSubtotal - discount, 0) + shipping + tax;
 
-  const applyCoupon = async () => {
-    const res = await fetch("/api/coupons", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: coupon }),
-    });
-    const json = await res.json();
-    if (!res.ok) {
-      toast.error(json.error || "Invalid coupon");
-      setCouponData(null);
+  const applyCoupon = () => {
+    const code = coupon.trim().toUpperCase();
+    if (code === "WELCOME10") {
+      setCouponData({ code, discountPercent: 10 });
+      toast.success("Coupon WELCOME10 applied");
       return;
     }
-    setCouponData(json);
-    toast.success(`Coupon ${json.code} applied`);
+    if (code === "HANDMADE500") {
+      if (cartSubtotal < 5000) {
+        toast.error("Minimum order ₹5,000 required");
+        return;
+      }
+      setCouponData({ code, discountAmount: 500 });
+      toast.success("Coupon HANDMADE500 applied");
+      return;
+    }
+    toast.error("Invalid coupon");
+    setCouponData(null);
   };
 
   return (
@@ -125,95 +68,81 @@ export default function CartPage() {
       ) : (
         <div className="mt-10 grid gap-10 lg:grid-cols-[1.4fr_0.8fr]">
           <div className="space-y-6">
-            {items.map(
-              (item: {
-                id: string;
-                quantity: number;
-                product: {
-                  id: string;
-                  title: string;
-                  slug: string;
-                  price: number;
-                  discount: number;
-                  images: string[];
-                  stock: number;
-                };
-              }) => {
-                const price = calculateSalePrice(item.product.price, item.product.discount);
-                return (
-                  <div
-                    key={item.id}
-                    className="flex gap-4 rounded-2xl border border-border p-4 sm:gap-6"
+            {items.map((item) => {
+              const price = calculateSalePrice(
+                item.product.price,
+                item.product.discount
+              );
+              return (
+                <div
+                  key={item.id}
+                  className="flex gap-4 rounded-2xl border border-border p-4 sm:gap-6"
+                >
+                  <Link
+                    href={`/products/${item.product.slug}`}
+                    className="relative h-28 w-24 shrink-0 overflow-hidden rounded-xl bg-secondary sm:h-32 sm:w-28"
                   >
-                    <Link
-                      href={`/products/${item.product.slug}`}
-                      className="relative h-28 w-24 shrink-0 overflow-hidden rounded-xl bg-secondary sm:h-32 sm:w-28"
-                    >
-                      <Image
-                        src={item.product.images[0]}
-                        alt={item.product.title}
-                        fill
-                        className="object-cover"
-                        sizes="112px"
-                      />
-                    </Link>
-                    <div className="flex flex-1 flex-col justify-between">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <Link
-                            href={`/products/${item.product.slug}`}
-                            className="font-display text-xl hover:text-primary"
-                          >
-                            {item.product.title}
-                          </Link>
-                          <p className="mt-1 text-sm font-medium">
-                            {formatCurrency(price)}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => removeItem.mutate(item.id)}
-                          className="rounded-lg p-2 text-muted-foreground hover:bg-secondary hover:text-destructive"
-                          aria-label="Remove"
+                    <Image
+                      src={item.product.images[0]}
+                      alt={item.product.title}
+                      fill
+                      className="object-cover"
+                      sizes="112px"
+                    />
+                  </Link>
+                  <div className="flex flex-1 flex-col justify-between">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <Link
+                          href={`/products/${item.product.slug}`}
+                          className="font-display text-xl hover:text-primary"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {item.product.title}
+                        </Link>
+                        <p className="mt-1 text-sm font-medium">
+                          {formatCurrency(price)}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          removeItem(item.product.id);
+                          toast.success("Removed from cart");
+                        }}
+                        className="rounded-lg p-2 text-muted-foreground hover:bg-secondary hover:text-destructive"
+                        aria-label="Remove"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center rounded-xl border border-border">
+                        <button
+                          className="p-2"
+                          onClick={() =>
+                            updateQuantity(item.product.id, item.quantity - 1)
+                          }
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="w-8 text-center text-sm">{item.quantity}</span>
+                        <button
+                          className="p-2"
+                          disabled={item.quantity >= item.product.stock}
+                          onClick={() =>
+                            updateQuantity(item.product.id, item.quantity + 1)
+                          }
+                        >
+                          <Plus className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <div className="flex items-center rounded-xl border border-border">
-                          <button
-                            className="p-2"
-                            onClick={() =>
-                              updateItem.mutate({
-                                itemId: item.id,
-                                quantity: item.quantity - 1,
-                              })
-                            }
-                          >
-                            <Minus className="h-3.5 w-3.5" />
-                          </button>
-                          <span className="w-8 text-center text-sm">{item.quantity}</span>
-                          <button
-                            className="p-2"
-                            disabled={item.quantity >= item.product.stock}
-                            onClick={() =>
-                              updateItem.mutate({
-                                itemId: item.id,
-                                quantity: item.quantity + 1,
-                              })
-                            }
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <span className="text-sm font-medium">
-                          {formatCurrency(price * item.quantity)}
-                        </span>
-                      </div>
+                      <span className="text-sm font-medium">
+                        {formatCurrency(price * item.quantity)}
+                      </span>
                     </div>
                   </div>
-                );
-              }
-            )}
+                </div>
+              );
+            })}
           </div>
 
           <aside className="h-fit rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
@@ -228,12 +157,14 @@ export default function CartPage() {
                 Apply
               </Button>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">Try WELCOME10 or HANDMADE20</p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Try WELCOME10 or HANDMADE500
+            </p>
             <Separator className="my-5" />
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Subtotal</dt>
-                <dd>{formatCurrency(subtotal)}</dd>
+                <dd>{formatCurrency(cartSubtotal)}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Discount</dt>
@@ -244,7 +175,7 @@ export default function CartPage() {
                 <dd>{shipping === 0 ? "Free" : formatCurrency(shipping)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-muted-foreground">Tax (8%)</dt>
+                <dt className="text-muted-foreground">GST (18%)</dt>
                 <dd>{formatCurrency(tax)}</dd>
               </div>
               <Separator />
@@ -264,7 +195,6 @@ export default function CartPage() {
             >
               Checkout
             </Button>
-            {!session && null}
           </aside>
         </div>
       )}

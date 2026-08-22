@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { ProductCardData } from "@/types";
+import { calculateSalePrice } from "@/lib/utils";
 
 type UIState = {
   mobileNavOpen: boolean;
@@ -45,6 +47,72 @@ export const useWishlistStore = create<WishlistState>()(
       setIds: (ids) => set({ ids }),
     }),
     { name: "crafted-wishlist" }
+  )
+);
+
+export type GuestCartItem = {
+  id: string;
+  quantity: number;
+  product: ProductCardData;
+};
+
+type GuestCartState = {
+  items: GuestCartItem[];
+  addItem: (product: ProductCardData, quantity?: number) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
+  removeItem: (productId: string) => void;
+  clear: () => void;
+  itemCount: () => number;
+  subtotal: () => number;
+};
+
+export const useGuestCartStore = create<GuestCartState>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      addItem: (product, quantity = 1) => {
+        const items = [...get().items];
+        const existing = items.find((i) => i.product.id === product.id);
+        if (existing) {
+          existing.quantity = Math.min(
+            product.stock,
+            existing.quantity + quantity
+          );
+        } else {
+          items.unshift({
+            id: `guest-${product.id}`,
+            quantity: Math.min(product.stock, quantity),
+            product,
+          });
+        }
+        set({ items });
+      },
+      updateQuantity: (productId, quantity) => {
+        if (quantity < 1) {
+          set({ items: get().items.filter((i) => i.product.id !== productId) });
+          return;
+        }
+        set({
+          items: get().items.map((i) =>
+            i.product.id === productId
+              ? { ...i, quantity: Math.min(i.product.stock, quantity) }
+              : i
+          ),
+        });
+      },
+      removeItem: (productId) =>
+        set({ items: get().items.filter((i) => i.product.id !== productId) }),
+      clear: () => set({ items: [] }),
+      itemCount: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
+      subtotal: () =>
+        get().items.reduce(
+          (sum, i) =>
+            sum +
+            calculateSalePrice(i.product.price, i.product.discount) * i.quantity,
+          0
+        ),
+    }),
+    { name: "crafted-guest-cart" }
   )
 );
 

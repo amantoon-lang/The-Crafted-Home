@@ -19,21 +19,23 @@ const body = Outfit({
 
 export const metadata: Metadata = {
   title: {
-    default: "The Crafted Home | Handmade Home Décor Marketplace",
+    default: "The Crafted Home | Made in India · Born in Bhopal",
     template: "%s | The Crafted Home",
   },
   description:
-    "Discover premium handmade home décor from independent artisans. Ceramics, woodwork, macrame, candles, and more — crafted with love.",
+    "Handmade home décor made in India, born in Bhopal. Ceramics, textiles, wood, and light & scent — each piece with a story of why and how it was made.",
   keywords: [
     "handmade",
     "home decor",
+    "made in India",
+    "Bhopal",
     "artisan",
     "ceramics",
-    "macrame",
+    "textiles",
     "marketplace",
   ],
   openGraph: {
-    title: "The Crafted Home",
+    title: "The Crafted Home — Made in India · Born in Bhopal",
     description: "Handcrafted with Love, Designed for Your Home.",
     type: "website",
   },
