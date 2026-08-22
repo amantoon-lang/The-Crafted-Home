@@ -66,12 +66,11 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Demo accounts
+### Accounts
 
-| Role | Email | Password |
-|------|-------|----------|
-| Customer | customer@craftedhome.com | password123 |
-| Admin | admin@craftedhome.com | password123 |
+Use **Create account** on `/signup` with a username, email, and password. Guest browsing still works without signing in.
+
+For production, set `DATABASE_URL` (Postgres) so accounts persist in the database. If the database is unavailable, accounts can fall back to the file store when `GITHUB_TOKEN` is configured.
 
 ### Coupons
 

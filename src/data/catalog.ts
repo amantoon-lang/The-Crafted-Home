@@ -314,22 +314,3 @@ export function parseKeyValueMessage(text: string): Record<string, string> {
 /** Sync helpers for pages that still import named exports */
 export const catalogCategories = (localCatalog as CatalogData).categories;
 export const catalogProducts = (localCatalog as CatalogData).products;
-
-export const DEMO_USERS = [
-  {
-    id: "demo-customer",
-    name: "Avery Lane",
-    email: "customer@craftedhome.com",
-    password: "password123",
-    role: "CUSTOMER" as const,
-    phone: "+91 98765 43210",
-  },
-  {
-    id: "demo-admin",
-    name: "Admin",
-    email: "admin@craftedhome.com",
-    password: "password123",
-    role: "ADMIN" as const,
-    phone: "+91 98765 43211",
-  },
-];

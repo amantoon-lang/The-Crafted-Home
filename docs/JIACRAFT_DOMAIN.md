@@ -65,7 +65,8 @@ After DNS verifies (often 5–30 min), visit:
 
 ---
 
-## Demo logins (after seed)
+## Accounts
 
-- Customer: `customer@craftedhome.com` / `password123`
-- Admin: `admin@craftedhome.com` / `password123`
+Create a real account at **https://www.jiacraft.com/signup** (username + email + password).
+
+Guest browsing works without an account. For durable production auth, set `DATABASE_URL` on Vercel.

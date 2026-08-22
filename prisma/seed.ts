@@ -1,5 +1,4 @@
-import { PrismaClient, Role } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -318,46 +317,6 @@ async function main() {
   await prisma.account.deleteMany();
   await prisma.user.deleteMany();
 
-  const passwordHash = await bcrypt.hash("password123", 12);
-
-  const admin = await prisma.user.create({
-    data: {
-      name: "Admin",
-      email: "admin@craftedhome.com",
-      password: passwordHash,
-      phone: "+1 555 0100",
-      role: Role.ADMIN,
-    },
-  });
-
-  const customer = await prisma.user.create({
-    data: {
-      name: "Avery Lane",
-      email: "customer@craftedhome.com",
-      password: passwordHash,
-      phone: "+1 555 0101",
-      role: Role.CUSTOMER,
-    },
-  });
-
-  await prisma.cart.create({ data: { userId: customer.id } });
-  await prisma.cart.create({ data: { userId: admin.id } });
-
-  await prisma.address.create({
-    data: {
-      userId: customer.id,
-      label: "Home",
-      name: "Avery Lane",
-      phone: "+1 555 0101",
-      line1: "42 Willow Lane",
-      city: "Brooklyn",
-      state: "NY",
-      zip: "11201",
-      country: "US",
-      isDefault: true,
-    },
-  });
-
   const createdCategories = await Promise.all(
     categories.map((c) => prisma.category.create({ data: c }))
   );
@@ -399,30 +358,9 @@ async function main() {
     ],
   });
 
-  await prisma.review.createMany({
-    data: [
-      {
-        productId: createdProducts[0].id,
-        userId: customer.id,
-        rating: 5,
-        comment:
-          "Absolutely stunning. The grain is beautiful and it feels substantial — exactly what I hoped for.",
-      },
-      {
-        productId: createdProducts[1].id,
-        userId: customer.id,
-        rating: 5,
-        comment:
-          "This tapestry transformed our living room. Soft, elegant, and clearly made with care.",
-      },
-    ],
-  });
-
   console.log(`Seeded ${createdCategories.length} categories`);
   console.log(`Seeded ${createdProducts.length} products`);
-  console.log("Demo accounts:");
-  console.log("  Admin:    admin@craftedhome.com / password123");
-  console.log("  Customer: customer@craftedhome.com / password123");
+  console.log("No demo logins — create a real account at /signup.");
 }
 
 main()

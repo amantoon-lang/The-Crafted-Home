@@ -2,11 +2,13 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/lib/validations";
 import { authConfig } from "@/lib/auth.config";
-import { DEMO_USERS } from "@/data/catalog";
+import {
+  findAuthUserByIdentifier,
+  passwordsMatch,
+} from "@/lib/accounts";
 import type { Role } from "@prisma/client";
 
 declare module "next-auth" {
@@ -18,12 +20,14 @@ declare module "next-auth" {
       image?: string | null;
       role: Role;
       phone?: string | null;
+      username?: string | null;
     };
   }
 
   interface User {
     role: Role;
     phone?: string | null;
+    username?: string | null;
   }
 }
 
@@ -32,6 +36,7 @@ declare module "@auth/core/jwt" {
     id: string;
     role: Role;
     phone?: string | null;
+    username?: string | null;
   }
 }
 
@@ -39,45 +44,31 @@ const providers = [
   Credentials({
     name: "credentials",
     credentials: {
-      email: { label: "Email", type: "email" },
+      email: { label: "Email or username", type: "text" },
       password: { label: "Password", type: "password" },
     },
     async authorize(credentials) {
       const parsed = loginSchema.safeParse(credentials);
       if (!parsed.success) return null;
 
-      const email = parsed.data.email.toLowerCase();
-      const password = parsed.data.password;
+      const user = await findAuthUserByIdentifier(parsed.data.email);
+      if (!user?.passwordHash) return null;
 
-      // Demo users always work (no DB required) so the live site can sign in
-      const demo = DEMO_USERS.find((u) => u.email === email);
-      if (demo && demo.password === password) {
-        return {
-          id: demo.id,
-          name: demo.name,
-          email: demo.email,
-          image: null,
-          role: demo.role,
-          phone: demo.phone,
-        };
-      }
+      const valid = await passwordsMatch(
+        parsed.data.password,
+        user.passwordHash
+      );
+      if (!valid) return null;
 
-      try {
-        const user = await prisma.user.findUnique({ where: { email } });
-        if (!user?.password) return null;
-        const valid = await bcrypt.compare(password, user.password);
-        if (!valid) return null;
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-          role: user.role,
-          phone: user.phone,
-        };
-      } catch {
-        return null;
-      }
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        role: user.role,
+        phone: user.phone,
+        username: user.username,
+      };
     },
   }),
 ];
@@ -105,6 +96,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id!;
         token.role = user.role;
         token.phone = user.phone;
+        token.username = user.username;
       }
       return token;
     },

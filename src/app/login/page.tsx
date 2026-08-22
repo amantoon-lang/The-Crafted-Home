@@ -36,7 +36,7 @@ function LoginForm() {
     setLoading(false);
 
     if (result?.error) {
-      toast.error("Invalid email or password");
+      toast.error("Invalid email/username or password");
       return;
     }
     toast.success("Welcome back");
@@ -50,14 +50,19 @@ function LoginForm() {
         <div className="mb-8 text-center">
           <h1 className="font-display text-3xl">Welcome back</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sign in to continue shopping handmade pieces.
+            Sign in with your username or email and password.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" autoComplete="on">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" {...register("email")} />
+            <Label htmlFor="email">Email or username</Label>
+            <Input
+              id="email"
+              type="text"
+              autoComplete="username"
+              {...register("email")}
+            />
             {errors.email && (
               <p className="text-xs text-destructive">{errors.email.message}</p>
             )}
@@ -69,7 +74,12 @@ function LoginForm() {
                 Forgot password?
               </Link>
             </div>
-            <Input id="password" type="password" {...register("password")} />
+            <Input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              {...register("password")}
+            />
             {errors.password && (
               <p className="text-xs text-destructive">{errors.password.message}</p>
             )}
@@ -96,10 +106,8 @@ function LoginForm() {
             Create an account
           </Link>
         </p>
-        <p className="mt-4 rounded-xl bg-secondary/80 p-3 text-center text-xs text-muted-foreground">
-          Optional — you can browse and shop without an account.
-          <br />
-          Demo: customer@craftedhome.com / password123
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          You can still browse and shop as a guest without signing in.
         </p>
       </FadeIn>
     </div>

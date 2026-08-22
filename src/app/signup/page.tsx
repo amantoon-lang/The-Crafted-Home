@@ -40,7 +40,11 @@ export default function SignUpPage() {
         password: data.password,
         redirect: false,
       });
-      if (login?.error) throw new Error("Account created but sign-in failed");
+      if (login?.error) {
+        throw new Error(
+          "Account created — please sign in with your email and password"
+        );
+      }
 
       toast.success("Welcome to The Crafted Home");
       router.push("/shop");
@@ -58,41 +62,66 @@ export default function SignUpPage() {
         <div className="mb-8 text-center">
           <h1 className="font-display text-3xl">Create your account</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Join a community that values handmade living.
+            Choose a username and password to save orders and wishlist.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" autoComplete="on">
           <div className="space-y-2">
             <Label htmlFor="name">Full name</Label>
-            <Input id="name" {...register("name")} />
+            <Input id="name" autoComplete="name" {...register("name")} />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
           <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              autoComplete="username"
+              placeholder="e.g. aman.k"
+              {...register("username")}
+            />
+            {errors.username && (
+              <p className="text-xs text-destructive">{errors.username.message}</p>
+            )}
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" {...register("email")} />
+            <Input id="email" type="email" autoComplete="email" {...register("email")} />
             {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone">Phone (optional)</Label>
-            <Input id="phone" {...register("phone")} />
+            <Input id="phone" type="tel" autoComplete="tel" {...register("phone")} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" {...register("password")} />
+            <Input
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              {...register("password")}
+            />
             {errors.password && (
               <p className="text-xs text-destructive">{errors.password.message}</p>
             )}
+            <p className="text-xs text-muted-foreground">
+              At least 8 characters, with a letter and a number.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm password</Label>
-            <Input id="confirmPassword" type="password" {...register("confirmPassword")} />
+            <Input
+              id="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              {...register("confirmPassword")}
+            />
             {errors.confirmPassword && (
               <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
             )}
           </div>
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating account..." : "Sign up"}
+            {loading ? "Creating account..." : "Create account"}
           </Button>
         </form>
 

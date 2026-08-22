@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import { createAccount } from "@/lib/accounts";
 import { signUpSchema } from "@/lib/validations";
 
 export async function POST(req: Request) {
@@ -15,30 +14,29 @@ export async function POST(req: Request) {
       );
     }
 
-    const email = parsed.data.email.toLowerCase();
-    const existing = await prisma.user.findUnique({ where: { email } });
-    if (existing) {
-      return NextResponse.json({ error: "Email already registered" }, { status: 409 });
+    const result = await createAccount({
+      name: parsed.data.name,
+      username: parsed.data.username,
+      email: parsed.data.email,
+      phone: parsed.data.phone,
+      password: parsed.data.password,
+    });
+
+    if (result.error || !result.user) {
+      return NextResponse.json(
+        { error: result.error || "Registration failed" },
+        { status: result.status || 500 }
+      );
     }
 
-    const password = await bcrypt.hash(parsed.data.password, 12);
-    const user = await prisma.user.create({
-      data: {
-        name: parsed.data.name,
-        email,
-        phone: parsed.data.phone,
-        password,
-      },
-    });
-
-    await prisma.cart.create({ data: { userId: user.id } });
-
     return NextResponse.json({
-      id: user.id,
-      email: user.email,
-      name: user.name,
+      id: result.user.id,
+      email: result.user.email,
+      name: result.user.name,
+      username: result.user.username,
     });
-  } catch {
-    return NextResponse.json({ error: "Registration failed" }, { status: 500 });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Registration failed";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

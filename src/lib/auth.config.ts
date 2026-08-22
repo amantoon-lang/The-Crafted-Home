@@ -32,6 +32,7 @@ export const authConfig = {
         token.id = user.id!;
         token.role = user.role;
         token.phone = user.phone;
+        token.username = user.username;
       }
       return token;
     },
@@ -40,6 +41,7 @@ export const authConfig = {
         session.user.id = token.id as string;
         session.user.role = (token.role as "CUSTOMER" | "ADMIN") ?? "CUSTOMER";
         session.user.phone = token.phone as string | null;
+        session.user.username = token.username as string | null;
       }
       return session;
     },
