@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  loadCatalog,
   getCatalogProduct,
   getRelatedProducts,
 } from "@/data/catalog";
@@ -9,13 +10,14 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params;
-  const product = getCatalogProduct(slug);
+  const catalog = await loadCatalog();
+  const product = getCatalogProduct(catalog, slug);
 
   if (!product) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
 
-  const related = getRelatedProducts(product).map((p) => ({
+  const related = getRelatedProducts(catalog, product).map((p) => ({
     id: p.id,
     title: p.title,
     slug: p.slug,

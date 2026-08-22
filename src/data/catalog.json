@@ -1,0 +1,368 @@
+{
+  "categories": [
+    {
+      "id": "cat-wooden",
+      "name": "Wooden Decor",
+      "slug": "wooden-decor",
+      "image": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80"
+    },
+    {
+      "id": "cat-macrame",
+      "name": "Macrame",
+      "slug": "macrame",
+      "image": "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=800&q=80"
+    },
+    {
+      "id": "cat-ceramics",
+      "name": "Ceramics",
+      "slug": "ceramics",
+      "image": "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&q=80"
+    },
+    {
+      "id": "cat-wall",
+      "name": "Wall Art",
+      "slug": "wall-art",
+      "image": "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=800&q=80"
+    },
+    {
+      "id": "cat-candles",
+      "name": "Candles",
+      "slug": "candles",
+      "image": "https://images.unsplash.com/photo-1603006905004-abd84d2429d2?w=800&q=80"
+    },
+    {
+      "id": "cat-planters",
+      "name": "Planters",
+      "slug": "planters",
+      "image": "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=800&q=80"
+    },
+    {
+      "id": "cat-kitchen",
+      "name": "Kitchen Decor",
+      "slug": "kitchen-decor",
+      "image": "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80"
+    }
+  ],
+  "products": [
+    {
+      "id": "prod-oak-board",
+      "title": "Hand-Carved Oak Serving Board",
+      "slug": "hand-carved-oak-serving-board",
+      "description": "A generously sized serving board carved from sustainably sourced oak — perfect for entertaining or everyday kitchen rituals.",
+      "story": "Each board is finished by hand with food-safe oil so the grain deepens beautifully over time.",
+      "price": 7499,
+      "discount": 10,
+      "images": [
+        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&q=80",
+        "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1200&q=80"
+      ],
+      "stock": 24,
+      "artisan": "Maya Chen",
+      "materials": "American white oak, food-safe mineral oil",
+      "dimensions": "18 × 10 × 1 in",
+      "rating": 4.8,
+      "reviewCount": 42,
+      "featured": true,
+      "trending": true,
+      "bestSeller": true,
+      "categoryId": "cat-wooden",
+      "category": { "name": "Wooden Decor", "slug": "wooden-decor" },
+      "createdAt": "2026-06-01T00:00:00.000Z",
+      "reviews": [
+        {
+          "id": "rev-1",
+          "rating": 5,
+          "comment": "Beautiful grain and substantial feel — our go-to cheese board.",
+          "createdAt": "2026-07-01T00:00:00.000Z",
+          "user": { "name": "Avery Lane" }
+        }
+      ]
+    },
+    {
+      "id": "prod-macrame",
+      "title": "Linen Wall Macrame Tapestry",
+      "slug": "linen-wall-macrame-tapestry",
+      "description": "An airy large-scale macrame piece woven from soft natural cord — softens blank walls with texture and light.",
+      "story": "Knotted over three days, finished with a hand-sanded birch dowel.",
+      "price": 12499,
+      "discount": 0,
+      "images": [
+        "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=1200&q=80",
+        "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1200&q=80"
+      ],
+      "stock": 12,
+      "artisan": "Elena Rojas",
+      "materials": "Natural linen cord, birch dowel",
+      "dimensions": "36 × 48 in",
+      "rating": 4.9,
+      "reviewCount": 67,
+      "featured": true,
+      "trending": true,
+      "bestSeller": false,
+      "categoryId": "cat-macrame",
+      "category": { "name": "Macrame", "slug": "macrame" },
+      "createdAt": "2026-05-20T00:00:00.000Z",
+      "reviews": []
+    },
+    {
+      "id": "prod-vases",
+      "title": "Speckled Stoneware Vase Set",
+      "slug": "speckled-stoneware-vase-set",
+      "description": "A trio of wheel-thrown vases with a soft speckled glaze — lovely alone or clustered on a console.",
+      "story": "Thrown on a kick wheel and glazed with a signature ash blend.",
+      "price": 9499,
+      "discount": 15,
+      "images": [
+        "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=1200&q=80",
+        "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=1200&q=80"
+      ],
+      "stock": 18,
+      "artisan": "Jonah Hale",
+      "materials": "Stoneware clay, ash glaze",
+      "dimensions": "5–9 in height (set of 3)",
+      "rating": 4.7,
+      "reviewCount": 31,
+      "featured": true,
+      "trending": false,
+      "bestSeller": true,
+      "categoryId": "cat-ceramics",
+      "category": { "name": "Ceramics", "slug": "ceramics" },
+      "createdAt": "2026-05-10T00:00:00.000Z",
+      "reviews": []
+    },
+    {
+      "id": "prod-botanical",
+      "title": "Abstract Botanical Print",
+      "slug": "abstract-botanical-print",
+      "description": "Limited-edition print with soft greens and warm neutrals that complement handmade textiles and wood.",
+      "story": "Signed and numbered on archival cotton rag paper.",
+      "price": 6499,
+      "discount": 0,
+      "images": [
+        "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=1200&q=80",
+        "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1200&q=80"
+      ],
+      "stock": 40,
+      "artisan": "Priya Nair",
+      "materials": "Archival cotton rag, pigment ink",
+      "dimensions": "16 × 20 in (unframed)",
+      "rating": 4.6,
+      "reviewCount": 19,
+      "featured": false,
+      "trending": true,
+      "bestSeller": false,
+      "categoryId": "cat-wall",
+      "category": { "name": "Wall Art", "slug": "wall-art" },
+      "createdAt": "2026-04-28T00:00:00.000Z",
+      "reviews": []
+    },
+    {
+      "id": "prod-candles",
+      "title": "Beeswax Pillar Candle Trio",
+      "slug": "beeswax-pillar-candle-trio",
+      "description": "Slow-burning beeswax pillars with a gentle honey scent — warm ambient light for evenings at home.",
+      "story": "Hand-poured in small batches and cooled overnight for an even burn.",
+      "price": 4499,
+      "discount": 5,
+      "images": [
+        "https://images.unsplash.com/photo-1603006905004-abd84d2429d2?w=1200&q=80",
+        "https://images.unsplash.com/photo-1602607326812-0e5c8d5f0b8e?w=1200&q=80"
+      ],
+      "stock": 55,
+      "artisan": "The Meadow Apothecary",
+      "materials": "100% beeswax, cotton wick, ceramic vessel",
+      "dimensions": "3 × 4 in each",
+      "rating": 4.9,
+      "reviewCount": 88,
+      "featured": true,
+      "trending": true,
+      "bestSeller": true,
+      "categoryId": "cat-candles",
+      "category": { "name": "Candles", "slug": "candles" },
+      "createdAt": "2026-04-15T00:00:00.000Z",
+      "reviews": []
+    },
+    {
+      "id": "prod-planter",
+      "title": "Terracotta Hanging Planter",
+      "slug": "terracotta-hanging-planter",
+      "description": "Hand-formed terracotta planter with a braided jute hanger — ideal for trailing greens and herbs.",
+      "story": "Fired in a wood kiln that leaves subtle flame marks on every piece.",
+      "price": 3799,
+      "discount": 0,
+      "images": [
+        "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=1200&q=80",
+        "https://images.unsplash.com/photo-1463320898484-cdee8141c787?w=1200&q=80"
+      ],
+      "stock": 30,
+      "artisan": "Sofia Alvarez",
+      "materials": "Terracotta clay, natural jute",
+      "dimensions": "6 in diameter × 5 in depth",
+      "rating": 4.5,
+      "reviewCount": 27,
+      "featured": false,
+      "trending": true,
+      "bestSeller": false,
+      "categoryId": "cat-planters",
+      "category": { "name": "Planters", "slug": "planters" },
+      "createdAt": "2026-04-01T00:00:00.000Z",
+      "reviews": []
+    },
+    {
+      "id": "prod-towels",
+      "title": "Handwoven Linen Tea Towels",
+      "slug": "handwoven-linen-tea-towels",
+      "description": "A set of three tea towels woven on a traditional loom — soft, absorbent, and beautiful on display.",
+      "story": "Woven from European flax linen in patterns passed down for generations.",
+      "price": 5199,
+      "discount": 0,
+      "images": [
+        "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=1200&q=80",
+        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&q=80"
+      ],
+      "stock": 45,
+      "artisan": "Meridian Loom Co-op",
+      "materials": "100% European flax linen",
+      "dimensions": "20 × 28 in each",
+      "rating": 4.8,
+      "reviewCount": 53,
+      "featured": true,
+      "trending": false,
+      "bestSeller": true,
+      "categoryId": "cat-kitchen",
+      "category": { "name": "Kitchen Decor", "slug": "kitchen-decor" },
+      "createdAt": "2026-03-22T00:00:00.000Z",
+      "reviews": []
+    },
+    {
+      "id": "prod-shelf",
+      "title": "Walnut Floating Shelf",
+      "slug": "walnut-floating-shelf",
+      "description": "A minimal floating shelf milled from solid walnut — clean, gallery-like display for ceramics and books.",
+      "story": "Finished with hand-rubbed hardwax oil that deepens the grain over time.",
+      "price": 10999,
+      "discount": 12,
+      "images": [
+        "https://images.unsplash.com/photo-1594026112284-02bb6f3352fe?w=1200&q=80",
+        "https://images.unsplash.com/photo-1618220179428-22790b461013?w=1200&q=80"
+      ],
+      "stock": 16,
+      "artisan": "David Park",
+      "materials": "Solid walnut, steel hidden brackets",
+      "dimensions": "36 × 8 × 2 in",
+      "rating": 4.7,
+      "reviewCount": 22,
+      "featured": false,
+      "trending": false,
+      "bestSeller": true,
+      "categoryId": "cat-wooden",
+      "category": { "name": "Wooden Decor", "slug": "wooden-decor" },
+      "createdAt": "2026-03-10T00:00:00.000Z",
+      "reviews": []
+    },
+    {
+      "id": "prod-pourover",
+      "title": "Ceramic Pour-Over Set",
+      "slug": "ceramic-pour-over-set",
+      "description": "A hand-thrown pour-over dripper with matching mug — ritual coffee, elevated.",
+      "story": "Refined over years of daily use for a balanced pour and easy cleaning.",
+      "price": 7999,
+      "discount": 0,
+      "images": [
+        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1200&q=80",
+        "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=1200&q=80"
+      ],
+      "stock": 22,
+      "artisan": "Amelia Brooks",
+      "materials": "Porcelain, satin matte glaze",
+      "dimensions": "Dripper 5 in / Mug 12 oz",
+      "rating": 4.9,
+      "reviewCount": 74,
+      "featured": true,
+      "trending": true,
+      "bestSeller": true,
+      "categoryId": "cat-ceramics",
+      "category": { "name": "Ceramics", "slug": "ceramics" },
+      "createdAt": "2026-03-01T00:00:00.000Z",
+      "reviews": []
+    },
+    {
+      "id": "prod-mirror",
+      "title": "Woven Rattan Mirror",
+      "slug": "woven-rattan-mirror",
+      "description": "A circular mirror framed in handwoven rattan — organic texture for entryways and dressing nooks.",
+      "story": "Each frame takes a full day of careful weaving.",
+      "price": 13999,
+      "discount": 8,
+      "images": [
+        "https://images.unsplash.com/photo-1618220179428-22790b461013?w=1200&q=80",
+        "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=1200&q=80"
+      ],
+      "stock": 10,
+      "artisan": "Bali Weave Atelier",
+      "materials": "Natural rattan, glass mirror",
+      "dimensions": "28 in diameter",
+      "rating": 4.6,
+      "reviewCount": 15,
+      "featured": true,
+      "trending": false,
+      "bestSeller": false,
+      "categoryId": "cat-wall",
+      "category": { "name": "Wall Art", "slug": "wall-art" },
+      "createdAt": "2026-02-18T00:00:00.000Z",
+      "reviews": []
+    },
+    {
+      "id": "prod-cedar",
+      "title": "Cedarwood Diffuser Candle",
+      "slug": "cedarwood-diffuser-candle",
+      "description": "A soy-blend candle with notes of cedarwood, amber, and soft musk in reusable amber glass.",
+      "story": "Blended by hand in small batches; the wooden lid doubles as a coaster.",
+      "price": 3199,
+      "discount": 0,
+      "images": [
+        "https://images.unsplash.com/photo-1602607326812-0e5c8d5f0b8e?w=1200&q=80",
+        "https://images.unsplash.com/photo-1603006905004-abd84d2429d2?w=1200&q=80"
+      ],
+      "stock": 60,
+      "artisan": "Hearth & Wick",
+      "materials": "Soy wax blend, essential oils, amber glass",
+      "dimensions": "8 oz / 40-hour burn",
+      "rating": 4.8,
+      "reviewCount": 91,
+      "featured": false,
+      "trending": true,
+      "bestSeller": true,
+      "categoryId": "cat-candles",
+      "category": { "name": "Candles", "slug": "candles" },
+      "createdAt": "2026-02-05T00:00:00.000Z",
+      "reviews": []
+    },
+    {
+      "id": "prod-hanger",
+      "title": "Braided Plant Hanger",
+      "slug": "braided-plant-hanger",
+      "description": "A sculptural plant hanger braided from soft cotton rope — bring greenery into vertical space.",
+      "story": "Braided by hand in small studio batches.",
+      "price": 2799,
+      "discount": 0,
+      "images": [
+        "https://images.unsplash.com/photo-1463320898484-cdee8141c787?w=1200&q=80",
+        "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=1200&q=80"
+      ],
+      "stock": 38,
+      "artisan": "Nora Kim",
+      "materials": "Organic cotton rope",
+      "dimensions": "42 in length",
+      "rating": 4.4,
+      "reviewCount": 33,
+      "featured": false,
+      "trending": false,
+      "bestSeller": false,
+      "categoryId": "cat-macrame",
+      "category": { "name": "Macrame", "slug": "macrame" },
+      "createdAt": "2026-01-28T00:00:00.000Z",
+      "reviews": []
+    }
+  ]
+}

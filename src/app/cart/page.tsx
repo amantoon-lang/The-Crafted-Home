@@ -30,10 +30,9 @@ export default function CartPage() {
   } else if (couponData?.discountAmount) {
     discount = couponData.discountAmount;
   }
-  const shipping = cartSubtotal - discount >= 100 ? 0 : items.length ? 8.5 : 0;
-  const tax = Math.round(Math.max(cartSubtotal - discount, 0) * 0.08 * 100) / 100;
-  const total =
-    Math.round((Math.max(cartSubtotal - discount, 0) + shipping + tax) * 100) / 100;
+  const shipping = cartSubtotal - discount >= 4999 ? 0 : items.length ? 99 : 0;
+  const tax = Math.round(Math.max(cartSubtotal - discount, 0) * 0.18);
+  const total = Math.max(cartSubtotal - discount, 0) + shipping + tax;
 
   const applyCoupon = () => {
     const code = coupon.trim().toUpperCase();
@@ -42,13 +41,13 @@ export default function CartPage() {
       toast.success("Coupon WELCOME10 applied");
       return;
     }
-    if (code === "HANDMADE20") {
-      if (cartSubtotal < 150) {
-        toast.error("Minimum order $150 required");
+    if (code === "HANDMADE500") {
+      if (cartSubtotal < 5000) {
+        toast.error("Minimum order ₹5,000 required");
         return;
       }
-      setCouponData({ code, discountAmount: 20 });
-      toast.success("Coupon HANDMADE20 applied");
+      setCouponData({ code, discountAmount: 500 });
+      toast.success("Coupon HANDMADE500 applied");
       return;
     }
     toast.error("Invalid coupon");
@@ -159,7 +158,7 @@ export default function CartPage() {
               </Button>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Try WELCOME10 or HANDMADE20
+              Try WELCOME10 or HANDMADE500
             </p>
             <Separator className="my-5" />
             <dl className="space-y-3 text-sm">
@@ -176,7 +175,7 @@ export default function CartPage() {
                 <dd>{shipping === 0 ? "Free" : formatCurrency(shipping)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-muted-foreground">Tax (8%)</dt>
+                <dt className="text-muted-foreground">GST (18%)</dt>
                 <dd>{formatCurrency(tax)}</dd>
               </div>
               <Separator />

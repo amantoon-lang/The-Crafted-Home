@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { catalogProducts } from "@/data/catalog";
+import { loadCatalog } from "@/data/catalog";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -9,7 +9,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ suggestions: [] });
   }
 
-  const suggestions = catalogProducts
+  const catalog = await loadCatalog();
+  const suggestions = catalog.products
     .filter(
       (p) =>
         p.title.toLowerCase().includes(q) || p.artisan.toLowerCase().includes(q)

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { queryCatalogProducts } from "@/data/catalog";
+import { loadCatalog, queryCatalogProducts } from "@/data/catalog";
 import { productFilterSchema } from "@/lib/validations";
 
 export async function GET(req: Request) {
@@ -15,8 +15,8 @@ export async function GET(req: Request) {
   const page = parsed.data.page ?? 1;
   const limit = parsed.data.limit ?? 12;
 
-  // Catalog-first so inventory always works without a production database
-  const result = queryCatalogProducts({
+  const catalog = await loadCatalog();
+  const result = queryCatalogProducts(catalog, {
     q,
     category,
     minPrice,

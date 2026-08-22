@@ -1,9 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import {
-  catalogProducts,
-  getCatalogCategories,
-} from "@/data/catalog";
+import { loadCatalog } from "@/data/catalog";
 import { Button } from "@/components/ui/button";
 import { ProductGrid } from "@/components/products/product-grid";
 import { FadeIn } from "@/components/ui/motion";
@@ -41,34 +38,16 @@ const instagramImages = [
   "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
 ];
 
-function toCard(p: (typeof catalogProducts)[number]) {
-  return {
-    id: p.id,
-    title: p.title,
-    slug: p.slug,
-    price: p.price,
-    discount: p.discount,
-    images: p.images,
-    artisan: p.artisan,
-    rating: p.rating,
-    reviewCount: p.reviewCount,
-    stock: p.stock,
-    category: p.category,
-    featured: p.featured,
-    trending: p.trending,
-    bestSeller: p.bestSeller,
-  };
-}
-
 export default async function HomePage() {
-  const categories = getCatalogCategories();
-  const featured = catalogProducts.filter((p) => p.featured).slice(0, 4).map(toCard);
-  const trending = catalogProducts.filter((p) => p.trending).slice(0, 4).map(toCard);
-  const bestsellers = catalogProducts.filter((p) => p.bestSeller).slice(0, 4).map(toCard);
+  const catalog = await loadCatalog();
+  const categories = catalog.categories;
+  const featured = catalog.products.filter((p) => p.featured).slice(0, 4);
+  const trending = catalog.products.filter((p) => p.trending).slice(0, 4);
+  const bestsellers = catalog.products.filter((p) => p.bestSeller).slice(0, 4);
 
   const artisans = [
     ...new Map(
-      catalogProducts.slice(0, 8).map((p) => [
+      catalog.products.slice(0, 8).map((p) => [
         p.artisan,
         { name: p.artisan, image: p.images[0], category: p.category?.name || "" },
       ])

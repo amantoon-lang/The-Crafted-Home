@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { getCatalogCategories } from "@/data/catalog";
+import { loadCatalog, getCatalogCategories } from "@/data/catalog";
 
 export async function GET() {
-  return NextResponse.json({ categories: getCatalogCategories() });
+  const catalog = await loadCatalog();
+  return NextResponse.json({ categories: getCatalogCategories(catalog) });
 }
