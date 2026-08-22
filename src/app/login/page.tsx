@@ -97,6 +97,8 @@ function LoginForm() {
           </Link>
         </p>
         <p className="mt-4 rounded-xl bg-secondary/80 p-3 text-center text-xs text-muted-foreground">
+          Optional — you can browse and shop without an account.
+          <br />
           Demo: customer@craftedhome.com / password123
         </p>
       </FadeIn>

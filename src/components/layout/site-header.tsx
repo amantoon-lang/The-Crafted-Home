@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { useQuery } from "@tanstack/react-query";
 import {
   Heart,
   Menu,
@@ -18,7 +17,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/components/providers/theme-provider";
-import { useUIStore } from "@/store";
+import { useUIStore, useGuestCartStore } from "@/store";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -37,16 +36,10 @@ export function SiteHeader() {
     useUIStore();
   const [scrolled, setScrolled] = useState(false);
   const [query, setQuery] = useState("");
+  const [mounted, setMounted] = useState(false);
+  const guestItems = useGuestCartStore((s) => s.items);
 
-  const { data: cart } = useQuery({
-    queryKey: ["cart"],
-    queryFn: async () => {
-      const res = await fetch("/api/cart");
-      if (!res.ok) return { itemCount: 0 };
-      return res.json();
-    },
-    enabled: Boolean(session?.user),
-  });
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -60,7 +53,9 @@ export function SiteHeader() {
     setSearchOpen(false);
   }, [pathname, setMobileNavOpen, setSearchOpen]);
 
-  const itemCount = cart?.itemCount ?? 0;
+  const itemCount = mounted
+    ? guestItems.reduce((sum, i) => sum + i.quantity, 0)
+    : 0;
   const isHome = pathname === "/";
 
   return (
@@ -121,7 +116,7 @@ export function SiteHeader() {
             {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
           <Button variant="ghost" size="icon" asChild>
-            <Link href={session ? "/wishlist" : "/login"} aria-label="Wishlist">
+            <Link href="/wishlist" aria-label="Wishlist">
               <Heart className="h-5 w-5" />
             </Link>
           </Button>
