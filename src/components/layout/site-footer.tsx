@@ -2,15 +2,18 @@ import Link from "next/link";
 import { Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { OriginMark } from "@/components/brand/origin-mark";
 
 const footerLinks = {
   Shop: [
     { href: "/shop", label: "All Products" },
     { href: "/shop?category=ceramics", label: "Ceramics" },
-    { href: "/shop?category=macrame", label: "Macrame" },
-    { href: "/shop?category=candles", label: "Candles" },
+    { href: "/shop?category=textiles", label: "Textiles" },
+    { href: "/shop?category=wood", label: "Wood" },
+    { href: "/shop?category=light-scent", label: "Light & Scent" },
   ],
   Company: [
+    { href: "/#origin", label: "Our origin" },
     { href: "/#artisans", label: "Artisans" },
     { href: "/#why-handmade", label: "Why Handmade" },
     { href: "/#testimonials", label: "Stories" },
@@ -32,9 +35,10 @@ export function SiteFooter() {
             <Link href="/" className="font-display text-2xl text-foreground">
               The Crafted Home
             </Link>
+            <OriginMark className="mt-3" />
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
-              A curated marketplace for handmade home décor — pieces with soul,
-              made by independent artisans around the world.
+              A curated marketplace for handmade home décor — ceramics, textiles,
+              wood, and light — made in India, born in Bhopal.
             </p>
             <form className="mt-6 flex max-w-md gap-2" action="/api/newsletter" method="post">
               <Input
@@ -71,7 +75,7 @@ export function SiteFooter() {
 
         <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-border pt-8 sm:flex-row sm:items-center">
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} The Crafted Home. Crafted with care.
+            © {new Date().getFullYear()} The Crafted Home. Made in India · Born in Bhopal.
           </p>
           <a
             href="https://instagram.com"

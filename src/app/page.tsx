@@ -4,28 +4,29 @@ import { loadCatalog } from "@/data/catalog";
 import { Button } from "@/components/ui/button";
 import { ProductGrid } from "@/components/products/product-grid";
 import { FadeIn } from "@/components/ui/motion";
-import { Quote, Leaf, HandHeart, Truck } from "lucide-react";
+import { OriginMark } from "@/components/brand/origin-mark";
+import { Quote, Leaf, HandHeart, MapPin } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 const testimonials = [
   {
     quote:
-      "Every piece feels considered. The ceramic vase set is the first thing guests notice.",
-    name: "Jordan Ellis",
-    place: "Austin, TX",
+      "Every piece feels considered. The ceramic vase set is the first thing guests notice — and knowing it was made in India makes it feel even more special.",
+    name: "Ananya Shah",
+    place: "Indore",
   },
   {
     quote:
-      "Finally a marketplace that respects craftsmanship. Shipping was careful and packaging beautiful.",
-    name: "Sam Rivera",
-    place: "Seattle, WA",
+      "Finally a marketplace that respects craftsmanship. Packaging was careful, and the story behind the candle made me keep the jar.",
+    name: "Kabir Mehta",
+    place: "Mumbai",
   },
   {
     quote:
-      "The oak serving board is now part of every dinner we host. Worth every penny.",
-    name: "Casey Morgan",
-    place: "Chicago, IL",
+      "The oak serving board is now part of every dinner we host. Proud it comes from a brand born in Bhopal.",
+    name: "Riya Kapoor",
+    place: "Bhopal",
   },
 ];
 
@@ -68,22 +69,25 @@ export default async function HomePage() {
         <div className="hero-overlay absolute inset-0" />
         <div className="relative mx-auto flex min-h-[92vh] max-w-7xl flex-col justify-end px-4 pb-20 pt-32 sm:px-6 lg:px-8 lg:pb-28">
           <FadeIn>
+            <OriginMark onDark size="md" className="mb-4" />
+          </FadeIn>
+          <FadeIn delay={0.08}>
             <p className="font-display text-4xl text-white sm:text-6xl lg:text-7xl">
               The Crafted Home
             </p>
           </FadeIn>
-          <FadeIn delay={0.12}>
+          <FadeIn delay={0.16}>
             <h1 className="mt-4 max-w-2xl text-xl font-light text-white/90 sm:text-2xl lg:text-3xl">
               Handcrafted with Love, Designed for Your Home.
             </h1>
           </FadeIn>
-          <FadeIn delay={0.22}>
+          <FadeIn delay={0.26}>
             <p className="mt-4 max-w-lg text-sm leading-relaxed text-white/75 sm:text-base">
-              Discover one-of-a-kind pieces from independent artisans — ceramics,
-              textiles, woodwork, and quiet luxuries for everyday living.
+              Ceramics, textiles, wood, and quiet light — handmade in India,
+              rooted in Bhopal, made for everyday living.
             </p>
           </FadeIn>
-          <FadeIn delay={0.32}>
+          <FadeIn delay={0.36}>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg" variant="accent">
                 <Link href="/shop">Shop Now</Link>
@@ -101,16 +105,31 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <section className="border-b border-border bg-secondary/50">
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-4 py-8 text-center sm:px-6 lg:flex-row lg:justify-between lg:px-8 lg:text-left">
+          <div>
+            <OriginMark size="md" />
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+              Every piece ships with a story — why it was made, how it was made,
+              and the hands in Bhopal and across India that shaped it.
+            </p>
+          </div>
+          <Button asChild variant="outline">
+            <Link href="/#origin">Our origin</Link>
+          </Button>
+        </div>
+      </section>
+
       <section id="collections" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <FadeIn>
           <div className="mb-10 max-w-xl">
-            <h2 className="font-display text-3xl sm:text-4xl">Featured Collections</h2>
+            <h2 className="font-display text-3xl sm:text-4xl">Collections</h2>
             <p className="mt-3 text-muted-foreground">
-              Explore categories shaped by material, craft, and the makers behind them.
+              Four focused collections — ceramics, textiles, wood, and light & scent.
             </p>
           </div>
         </FadeIn>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 lg:gap-4">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:gap-4">
           {categories.map((category, i) => (
             <FadeIn key={category.id} delay={i * 0.05}>
               <Link
@@ -169,6 +188,44 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <section id="origin" className="relative overflow-hidden py-24">
+        <div
+          className="absolute inset-0 opacity-[0.12]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 20% 20%, #C98C4A 0%, transparent 45%), radial-gradient(circle at 80% 70%, #7A5C43 0%, transparent 40%)",
+          }}
+        />
+        <div className="relative mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-2 lg:items-center lg:px-8">
+          <FadeIn>
+            <OriginMark size="md" />
+            <h2 className="mt-4 font-display text-3xl sm:text-5xl">
+              From Bhopal, for every home
+            </h2>
+            <p className="mt-5 text-base leading-relaxed text-muted-foreground">
+              The Crafted Home began in Bhopal — a city of lakes, quiet craft,
+              and homes that value warmth over trend. We source and shape pieces
+              made in India so you can feel the maker&apos;s intent: why a piece
+              exists, and how it came to life.
+            </p>
+            <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+              Open any product and read its story. That connection is the point.
+            </p>
+          </FadeIn>
+          <FadeIn delay={0.12}>
+            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
+              <Image
+                src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1400&q=80"
+                alt="Handmade objects arranged in warm natural light"
+                fill
+                className="object-cover"
+                sizes="(max-width:1024px) 100vw, 50vw"
+              />
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
       <section id="artisans" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <FadeIn>
           <div className="mb-10 max-w-xl">
@@ -213,18 +270,18 @@ export default async function HomePage() {
             {[
               {
                 icon: HandHeart,
-                title: "Support artisans",
-                text: "Your purchase goes directly to independent makers and small studios.",
+                title: "Support makers",
+                text: "Your purchase goes directly to independent makers and small studios across India.",
               },
               {
                 icon: Leaf,
                 title: "Thoughtful materials",
-                text: "Natural fibers, reclaimed woods, and small-batch finishes chosen with care.",
+                text: "Natural fibres, reclaimed woods, and small-batch finishes chosen with care.",
               },
               {
-                icon: Truck,
-                title: "Packed with intention",
-                text: "Plastic-light packaging and careful shipping so pieces arrive ready to love.",
+                icon: MapPin,
+                title: "Rooted in Bhopal",
+                text: "Born in Bhopal, made in India — every piece carries a real place and a real story.",
               },
             ].map((item, i) => (
               <FadeIn key={item.title} delay={i * 0.1}>

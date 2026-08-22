@@ -13,6 +13,10 @@ export type CatalogCategory = {
 export type CatalogProduct = ProductCardData & {
   description: string;
   story: string;
+  /** Why this piece exists — the human reason behind making it */
+  whyMade?: string;
+  /** How it was made — materials, process, craft */
+  howMade?: string;
   materials: string;
   dimensions: string;
   categoryId: string;
@@ -268,6 +272,8 @@ export function createProductFromFields(
     slug,
     description: fields.description?.trim() || title,
     story: fields.story?.trim() || "",
+    whyMade: fields.whymade?.trim() || fields.why?.trim() || "",
+    howMade: fields.howmade?.trim() || fields.how?.trim() || "",
     price: Math.round(price),
     discount: Number(fields.discount || 0) || 0,
     images: image

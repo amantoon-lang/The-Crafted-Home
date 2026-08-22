@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductGrid } from "@/components/products/product-grid";
+import { OriginMark } from "@/components/brand/origin-mark";
+import { FadeIn } from "@/components/ui/motion";
 import {
   calculateSalePrice,
   formatCurrency,
@@ -65,6 +67,7 @@ export default function ProductDetailPage() {
   const product = data.product;
   const salePrice = calculateSalePrice(product.price, product.discount);
   const wished = has(product.id);
+  const hasStory = Boolean(product.story || product.whyMade || product.howMade);
 
   const addToCart = () => {
     addItem(product, qty);
@@ -115,8 +118,10 @@ export default function ProductDetailPage() {
         </div>
 
         <div>
+          <OriginMark className="mb-3" />
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
             {product.artisan}
+            {product.category?.name ? ` · ${product.category.name}` : ""}
           </p>
           <h1 className="mt-2 font-display text-4xl leading-tight sm:text-5xl">
             {product.title}
@@ -162,13 +167,12 @@ export default function ProductDetailPage() {
             </p>
           </div>
 
-          {product.story && (
-            <div className="mt-8">
-              <h2 className="font-display text-2xl">The artisan story</h2>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {product.story}
-              </p>
-            </div>
+          {hasStory && (
+            <p className="mt-6 text-sm">
+              <a href="#story" className="text-accent underline-offset-4 hover:underline">
+                Read the story behind this piece
+              </a>
+            </p>
           )}
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -206,6 +210,47 @@ export default function ProductDetailPage() {
           </div>
         </div>
       </div>
+
+      {hasStory && (
+        <>
+          <Separator className="my-16" />
+          <section id="story" className="mx-auto max-w-3xl scroll-mt-28">
+            <FadeIn>
+              <OriginMark className="mb-4" />
+              <h2 className="font-display text-3xl sm:text-4xl">
+                The story behind this piece
+              </h2>
+              {product.story && (
+                <p className="mt-4 text-lg leading-relaxed text-foreground/90">
+                  {product.story}
+                </p>
+              )}
+            </FadeIn>
+            <div className="mt-10 grid gap-10 sm:grid-cols-2">
+              {product.whyMade && (
+                <FadeIn delay={0.08}>
+                  <p className="text-xs uppercase tracking-[0.22em] text-accent">
+                    Why it was made
+                  </p>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {product.whyMade}
+                  </p>
+                </FadeIn>
+              )}
+              {product.howMade && (
+                <FadeIn delay={0.16}>
+                  <p className="text-xs uppercase tracking-[0.22em] text-accent">
+                    How it was made
+                  </p>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {product.howMade}
+                  </p>
+                </FadeIn>
+              )}
+            </div>
+          </section>
+        </>
+      )}
 
       <Separator className="my-16" />
 

@@ -25,7 +25,7 @@ const navLinks = [
   { href: "/shop", label: "Shop" },
   { href: "/shop?sort=popularity", label: "Bestsellers" },
   { href: "/shop?category=ceramics", label: "Ceramics" },
-  { href: "/shop?category=wooden-decor", label: "Wood" },
+  { href: "/shop?category=textiles", label: "Textiles" },
 ];
 
 export function SiteHeader() {
@@ -81,7 +81,7 @@ export function SiteHeader() {
               The Crafted Home
             </span>
             <span className="hidden text-[10px] uppercase tracking-[0.22em] text-muted-foreground sm:block">
-              Handmade marketplace
+              Made in India · Born in Bhopal
             </span>
           </Link>
         </div>

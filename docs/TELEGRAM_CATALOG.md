@@ -65,16 +65,22 @@ Message your bot:
 
 ### Add a product
 
+Categories: `ceramics` · `textiles` · `wood` · `light-scent`
+
 ```
 /add
 title: Brass Diya Set
 price: 1299
-category: candles
+category: light-scent
 artisan: Local Atelier
 stock: 25
 description: Handcrafted brass diyas for home rituals
+whymade: Made for evenings when light becomes a ritual
+howmade: Cast and finished by hand in small Bhopal batches
 image: https://images.unsplash.com/photo-1603006905004-abd84d2429d2?w=1200&q=80
 ```
+
+Optional story fields: `story`, `whymade` (why it was made), `howmade` (how it was made).
 
 Or send a **photo** with the same caption fields (include at least `title` and `price`).
 

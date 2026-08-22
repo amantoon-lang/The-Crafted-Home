@@ -83,7 +83,11 @@ category: ceramics
 artisan: Priya
 stock: 12
 description: Handmade vase
+whymade: Made for monsoon flowers on a quiet console
+howmade: Wheel-thrown and ash-glazed in our Bhopal studio
 image: https://...</code>
+
+Categories: ceramics · textiles · wood · light-scent
 
 Or send a <b>photo</b> with caption using the same key:value lines (include title + price).`;
 }

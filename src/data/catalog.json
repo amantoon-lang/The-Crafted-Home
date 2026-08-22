@@ -1,46 +1,28 @@
 {
   "categories": [
     {
-      "id": "cat-wooden",
-      "name": "Wooden Decor",
-      "slug": "wooden-decor",
-      "image": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80"
-    },
-    {
-      "id": "cat-macrame",
-      "name": "Macrame",
-      "slug": "macrame",
-      "image": "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=800&q=80"
-    },
-    {
       "id": "cat-ceramics",
       "name": "Ceramics",
       "slug": "ceramics",
       "image": "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&q=80"
     },
     {
-      "id": "cat-wall",
-      "name": "Wall Art",
-      "slug": "wall-art",
-      "image": "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=800&q=80"
+      "id": "cat-textiles",
+      "name": "Textiles",
+      "slug": "textiles",
+      "image": "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=800&q=80"
     },
     {
-      "id": "cat-candles",
-      "name": "Candles",
-      "slug": "candles",
+      "id": "cat-wood",
+      "name": "Wood",
+      "slug": "wood",
+      "image": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80"
+    },
+    {
+      "id": "cat-light",
+      "name": "Light & Scent",
+      "slug": "light-scent",
       "image": "https://images.unsplash.com/photo-1603006905004-abd84d2429d2?w=800&q=80"
-    },
-    {
-      "id": "cat-planters",
-      "name": "Planters",
-      "slug": "planters",
-      "image": "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=800&q=80"
-    },
-    {
-      "id": "cat-kitchen",
-      "name": "Kitchen Decor",
-      "slug": "kitchen-decor",
-      "image": "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80"
     }
   ],
   "products": [
@@ -49,7 +31,9 @@
       "title": "Hand-Carved Oak Serving Board",
       "slug": "hand-carved-oak-serving-board",
       "description": "A generously sized serving board carved from sustainably sourced oak — perfect for entertaining or everyday kitchen rituals.",
-      "story": "Each board is finished by hand with food-safe oil so the grain deepens beautifully over time.",
+      "story": "Born from evenings around a Bhopal family table, where sharing food meant sharing time.",
+      "whyMade": "We wanted a board that felt like an heirloom from the first use — something that gathers people, not just appetizers. In Bhopal homes, meals stretch long; this piece was made to hold that rhythm.",
+      "howMade": "Each board is hand-carved from sustainably sourced oak in a small Madhya Pradesh workshop, sanded through fine grits, then finished with food-safe oil so the grain deepens with every gathering.",
       "price": 7499,
       "discount": 10,
       "images": [
@@ -57,16 +41,16 @@
         "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1200&q=80"
       ],
       "stock": 24,
-      "artisan": "Maya Chen",
-      "materials": "American white oak, food-safe mineral oil",
+      "artisan": "Ananya Verma",
+      "materials": "Oak, food-safe mineral oil",
       "dimensions": "18 × 10 × 1 in",
       "rating": 4.8,
       "reviewCount": 42,
       "featured": true,
       "trending": true,
       "bestSeller": true,
-      "categoryId": "cat-wooden",
-      "category": { "name": "Wooden Decor", "slug": "wooden-decor" },
+      "categoryId": "cat-wood",
+      "category": { "name": "Wood", "slug": "wood" },
       "createdAt": "2026-06-01T00:00:00.000Z",
       "reviews": [
         {
@@ -83,7 +67,9 @@
       "title": "Linen Wall Macrame Tapestry",
       "slug": "linen-wall-macrame-tapestry",
       "description": "An airy large-scale macrame piece woven from soft natural cord — softens blank walls with texture and light.",
-      "story": "Knotted over three days, finished with a hand-sanded birch dowel.",
+      "story": "Knot by knot, a quiet meditation that turns empty walls into something living.",
+      "whyMade": "Blank apartment walls in new Bhopal homes felt cold. This tapestry was designed to bring soft shadow and handmade presence into rooms that still smelled of fresh paint.",
+      "howMade": "Knotted over three days from natural linen cord, finished with a hand-sanded birch dowel. Every pattern is counted by hand — no two hang exactly alike.",
       "price": 12499,
       "discount": 0,
       "images": [
@@ -91,7 +77,7 @@
         "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1200&q=80"
       ],
       "stock": 12,
-      "artisan": "Elena Rojas",
+      "artisan": "Meera Joshi",
       "materials": "Natural linen cord, birch dowel",
       "dimensions": "36 × 48 in",
       "rating": 4.9,
@@ -99,8 +85,8 @@
       "featured": true,
       "trending": true,
       "bestSeller": false,
-      "categoryId": "cat-macrame",
-      "category": { "name": "Macrame", "slug": "macrame" },
+      "categoryId": "cat-textiles",
+      "category": { "name": "Textiles", "slug": "textiles" },
       "createdAt": "2026-05-20T00:00:00.000Z",
       "reviews": []
     },
@@ -109,7 +95,9 @@
       "title": "Speckled Stoneware Vase Set",
       "slug": "speckled-stoneware-vase-set",
       "description": "A trio of wheel-thrown vases with a soft speckled glaze — lovely alone or clustered on a console.",
-      "story": "Thrown on a kick wheel and glazed with a signature ash blend.",
+      "story": "Thrown for monsoon flowers and everyday stems from the neighbourhood market.",
+      "whyMade": "We noticed homes filled with plastic bottles used as vases. This set was made so everyday flowers — marigold, jasmine, market greens — could sit in something worthy of them.",
+      "howMade": "Thrown on a kick wheel in a Bhopal studio, bisque-fired, then glazed with a signature ash blend and high-fired for durability. Speckles come from the clay itself, not a stencil.",
       "price": 9499,
       "discount": 15,
       "images": [
@@ -117,7 +105,7 @@
         "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=1200&q=80"
       ],
       "stock": 18,
-      "artisan": "Jonah Hale",
+      "artisan": "Rohan Kale",
       "materials": "Stoneware clay, ash glaze",
       "dimensions": "5–9 in height (set of 3)",
       "rating": 4.7,
@@ -135,7 +123,9 @@
       "title": "Abstract Botanical Print",
       "slug": "abstract-botanical-print",
       "description": "Limited-edition print with soft greens and warm neutrals that complement handmade textiles and wood.",
-      "story": "Signed and numbered on archival cotton rag paper.",
+      "story": "Drawn from walks along the Upper Lake — leaves, light, and quiet water.",
+      "whyMade": "We wanted art that feels rooted in Central India without being literal — a soft reminder of Bhopal's green belts and lakeside mornings for walls far from home.",
+      "howMade": "Illustrated by hand, then printed as a signed, numbered edition on archival cotton rag with pigment inks. Each print is inspected for colour fidelity before it leaves the studio.",
       "price": 6499,
       "discount": 0,
       "images": [
@@ -151,8 +141,8 @@
       "featured": false,
       "trending": true,
       "bestSeller": false,
-      "categoryId": "cat-wall",
-      "category": { "name": "Wall Art", "slug": "wall-art" },
+      "categoryId": "cat-textiles",
+      "category": { "name": "Textiles", "slug": "textiles" },
       "createdAt": "2026-04-28T00:00:00.000Z",
       "reviews": []
     },
@@ -161,7 +151,9 @@
       "title": "Beeswax Pillar Candle Trio",
       "slug": "beeswax-pillar-candle-trio",
       "description": "Slow-burning beeswax pillars with a gentle honey scent — warm ambient light for evenings at home.",
-      "story": "Hand-poured in small batches and cooled overnight for an even burn.",
+      "story": "Made for power-cut evenings and slow dinners when the lights go soft.",
+      "whyMade": "During summer outages, candlelight is not aesthetic — it is life. We wanted pillars that burn clean, smell of honey, and feel honest in Indian homes.",
+      "howMade": "Hand-poured in small batches from pure beeswax with cotton wicks, then cooled overnight so the burn stays even. Ceramic cups are meant to be reused as tiny planters.",
       "price": 4499,
       "discount": 5,
       "images": [
@@ -169,7 +161,7 @@
         "https://images.unsplash.com/photo-1602607326812-0e5c8d5f0b8e?w=1200&q=80"
       ],
       "stock": 55,
-      "artisan": "The Meadow Apothecary",
+      "artisan": "Hearth Atelier, Bhopal",
       "materials": "100% beeswax, cotton wick, ceramic vessel",
       "dimensions": "3 × 4 in each",
       "rating": 4.9,
@@ -177,8 +169,8 @@
       "featured": true,
       "trending": true,
       "bestSeller": true,
-      "categoryId": "cat-candles",
-      "category": { "name": "Candles", "slug": "candles" },
+      "categoryId": "cat-light",
+      "category": { "name": "Light & Scent", "slug": "light-scent" },
       "createdAt": "2026-04-15T00:00:00.000Z",
       "reviews": []
     },
@@ -187,7 +179,9 @@
       "title": "Terracotta Hanging Planter",
       "slug": "terracotta-hanging-planter",
       "description": "Hand-formed terracotta planter with a braided jute hanger — ideal for trailing greens and herbs.",
-      "story": "Fired in a wood kiln that leaves subtle flame marks on every piece.",
+      "story": "Clay from local earth, fired so every piece carries a faint flame kiss.",
+      "whyMade": "Balconies in Indian cities are often the only garden. This planter was made to hang greens and tulsi where floor space is scarce — and to look beautiful empty or full.",
+      "howMade": "Hand-formed from terracotta clay, fired in a wood kiln that leaves subtle flame marks, then paired with a braided jute hanger finished by hand.",
       "price": 3799,
       "discount": 0,
       "images": [
@@ -195,7 +189,7 @@
         "https://images.unsplash.com/photo-1463320898484-cdee8141c787?w=1200&q=80"
       ],
       "stock": 30,
-      "artisan": "Sofia Alvarez",
+      "artisan": "Sofia Alvarez Studio × Bhopal Clay",
       "materials": "Terracotta clay, natural jute",
       "dimensions": "6 in diameter × 5 in depth",
       "rating": 4.5,
@@ -203,8 +197,8 @@
       "featured": false,
       "trending": true,
       "bestSeller": false,
-      "categoryId": "cat-planters",
-      "category": { "name": "Planters", "slug": "planters" },
+      "categoryId": "cat-ceramics",
+      "category": { "name": "Ceramics", "slug": "ceramics" },
       "createdAt": "2026-04-01T00:00:00.000Z",
       "reviews": []
     },
@@ -213,7 +207,9 @@
       "title": "Handwoven Linen Tea Towels",
       "slug": "handwoven-linen-tea-towels",
       "description": "A set of three tea towels woven on a traditional loom — soft, absorbent, and beautiful on display.",
-      "story": "Woven from European flax linen in patterns passed down for generations.",
+      "story": "Loom-woven for kitchens where chai spills and hospitality never ends.",
+      "whyMade": "Disposable kitchen cloths felt wasteful. These towels were made to soften with use, hang with dignity, and last through years of everyday Indian cooking.",
+      "howMade": "Woven on a traditional loom from flax linen in patterns passed down through a textile co-op. Washed, pressed, and packed as a set of three.",
       "price": 5199,
       "discount": 0,
       "images": [
@@ -222,15 +218,15 @@
       ],
       "stock": 45,
       "artisan": "Meridian Loom Co-op",
-      "materials": "100% European flax linen",
+      "materials": "100% flax linen",
       "dimensions": "20 × 28 in each",
       "rating": 4.8,
       "reviewCount": 53,
       "featured": true,
       "trending": false,
       "bestSeller": true,
-      "categoryId": "cat-kitchen",
-      "category": { "name": "Kitchen Decor", "slug": "kitchen-decor" },
+      "categoryId": "cat-textiles",
+      "category": { "name": "Textiles", "slug": "textiles" },
       "createdAt": "2026-03-22T00:00:00.000Z",
       "reviews": []
     },
@@ -239,7 +235,9 @@
       "title": "Walnut Floating Shelf",
       "slug": "walnut-floating-shelf",
       "description": "A minimal floating shelf milled from solid walnut — clean, gallery-like display for ceramics and books.",
-      "story": "Finished with hand-rubbed hardwax oil that deepens the grain over time.",
+      "story": "A quiet ledge for the objects you live with every day.",
+      "whyMade": "We needed a shelf that disappeared into the wall so ceramics and books could speak. Made for small Indian apartments where every centimetre of display matters.",
+      "howMade": "Milled from solid walnut, hand-sanded, and finished with hardwax oil that deepens the grain over time. Hidden steel brackets keep the line clean.",
       "price": 10999,
       "discount": 12,
       "images": [
@@ -247,7 +245,7 @@
         "https://images.unsplash.com/photo-1618220179428-22790b461013?w=1200&q=80"
       ],
       "stock": 16,
-      "artisan": "David Park",
+      "artisan": "Devansh Park Woodworks",
       "materials": "Solid walnut, steel hidden brackets",
       "dimensions": "36 × 8 × 2 in",
       "rating": 4.7,
@@ -255,8 +253,8 @@
       "featured": false,
       "trending": false,
       "bestSeller": true,
-      "categoryId": "cat-wooden",
-      "category": { "name": "Wooden Decor", "slug": "wooden-decor" },
+      "categoryId": "cat-wood",
+      "category": { "name": "Wood", "slug": "wood" },
       "createdAt": "2026-03-10T00:00:00.000Z",
       "reviews": []
     },
@@ -265,7 +263,9 @@
       "title": "Ceramic Pour-Over Set",
       "slug": "ceramic-pour-over-set",
       "description": "A hand-thrown pour-over dripper with matching mug — ritual coffee, elevated.",
-      "story": "Refined over years of daily use for a balanced pour and easy cleaning.",
+      "story": "For the morning ritual that starts before the city wakes.",
+      "whyMade": "Filter coffee and pour-over deserve vessels that make the pause feel intentional. This set was refined for balanced flow and easy cleaning after years of daily use.",
+      "howMade": "Hand-thrown porcelain dripper and mug, glazed in a satin matte finish, and kiln-fired for everyday strength. The spout angle was adjusted across many studio mornings.",
       "price": 7999,
       "discount": 0,
       "images": [
@@ -273,7 +273,7 @@
         "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=1200&q=80"
       ],
       "stock": 22,
-      "artisan": "Amelia Brooks",
+      "artisan": "Amelia Brooks Pottery",
       "materials": "Porcelain, satin matte glaze",
       "dimensions": "Dripper 5 in / Mug 12 oz",
       "rating": 4.9,
@@ -291,7 +291,9 @@
       "title": "Woven Rattan Mirror",
       "slug": "woven-rattan-mirror",
       "description": "A circular mirror framed in handwoven rattan — organic texture for entryways and dressing nooks.",
-      "story": "Each frame takes a full day of careful weaving.",
+      "story": "Woven to catch first light in the hallway — a soft welcome home.",
+      "whyMade": "Entryways often get forgotten. This mirror was made to greet you with warmth and texture — a handmade pause before the day begins or ends.",
+      "howMade": "Each rattan frame takes a full day of careful weaving around tempered glass. Edges are bound by hand so the circle stays true and soft to the touch.",
       "price": 13999,
       "discount": 8,
       "images": [
@@ -299,7 +301,7 @@
         "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=1200&q=80"
       ],
       "stock": 10,
-      "artisan": "Bali Weave Atelier",
+      "artisan": "Weave Atelier",
       "materials": "Natural rattan, glass mirror",
       "dimensions": "28 in diameter",
       "rating": 4.6,
@@ -307,8 +309,8 @@
       "featured": true,
       "trending": false,
       "bestSeller": false,
-      "categoryId": "cat-wall",
-      "category": { "name": "Wall Art", "slug": "wall-art" },
+      "categoryId": "cat-textiles",
+      "category": { "name": "Textiles", "slug": "textiles" },
       "createdAt": "2026-02-18T00:00:00.000Z",
       "reviews": []
     },
@@ -317,7 +319,9 @@
       "title": "Cedarwood Diffuser Candle",
       "slug": "cedarwood-diffuser-candle",
       "description": "A soy-blend candle with notes of cedarwood, amber, and soft musk in reusable amber glass.",
-      "story": "Blended by hand in small batches; the wooden lid doubles as a coaster.",
+      "story": "Blended for evenings when you want the room to exhale.",
+      "whyMade": "We wanted a scent that felt like open windows after rain — woody, calm, never overpowering. Made for Indian living rooms where fragrance should linger gently.",
+      "howMade": "Blended by hand in small batches with soy wax and essential oils. Poured into reusable amber glass; the wooden lid doubles as a coaster when the candle is lit.",
       "price": 3199,
       "discount": 0,
       "images": [
@@ -333,8 +337,8 @@
       "featured": false,
       "trending": true,
       "bestSeller": true,
-      "categoryId": "cat-candles",
-      "category": { "name": "Candles", "slug": "candles" },
+      "categoryId": "cat-light",
+      "category": { "name": "Light & Scent", "slug": "light-scent" },
       "createdAt": "2026-02-05T00:00:00.000Z",
       "reviews": []
     },
@@ -343,7 +347,9 @@
       "title": "Braided Plant Hanger",
       "slug": "braided-plant-hanger",
       "description": "A sculptural plant hanger braided from soft cotton rope — bring greenery into vertical space.",
-      "story": "Braided by hand in small studio batches.",
+      "story": "Braided so greenery can climb where floors cannot.",
+      "whyMade": "Vertical space is often unused in compact homes. This hanger was made so plants — and the calm they bring — can live at eye level without cluttering the floor.",
+      "howMade": "Braided by hand from organic cotton rope in small studio batches. Knots are tensioned for strength, then trimmed and steam-set so the shape holds.",
       "price": 2799,
       "discount": 0,
       "images": [
@@ -351,7 +357,7 @@
         "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=1200&q=80"
       ],
       "stock": 38,
-      "artisan": "Nora Kim",
+      "artisan": "Nora Kim Studio",
       "materials": "Organic cotton rope",
       "dimensions": "42 in length",
       "rating": 4.4,
@@ -359,8 +365,8 @@
       "featured": false,
       "trending": false,
       "bestSeller": false,
-      "categoryId": "cat-macrame",
-      "category": { "name": "Macrame", "slug": "macrame" },
+      "categoryId": "cat-textiles",
+      "category": { "name": "Textiles", "slug": "textiles" },
       "createdAt": "2026-01-28T00:00:00.000Z",
       "reviews": []
     }

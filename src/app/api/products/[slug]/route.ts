@@ -52,6 +52,8 @@ export async function GET(
       bestSeller: product.bestSeller,
       description: product.description,
       story: product.story,
+      whyMade: product.whyMade || "",
+      howMade: product.howMade || "",
       materials: product.materials,
       dimensions: product.dimensions,
       reviews: product.reviews,
