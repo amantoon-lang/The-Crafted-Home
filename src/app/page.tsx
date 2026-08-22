@@ -1,7 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
-import { prisma } from "@/lib/prisma";
-import { serializeProduct } from "@/types";
+import {
+  catalogProducts,
+  getCatalogCategories,
+} from "@/data/catalog";
 import { Button } from "@/components/ui/button";
 import { ProductGrid } from "@/components/products/product-grid";
 import { FadeIn } from "@/components/ui/motion";
@@ -33,44 +35,48 @@ const testimonials = [
 const instagramImages = [
   "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&q=80",
   "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=600&q=80",
-  "https://images.unsplash.com/photo-1602028915047-37209f1fd8c6?w=600&q=80",
+  "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=600&q=80",
   "https://images.unsplash.com/photo-1603006905004-abd84d2429d2?w=600&q=80",
   "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=600&q=80",
   "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
 ];
 
+function toCard(p: (typeof catalogProducts)[number]) {
+  return {
+    id: p.id,
+    title: p.title,
+    slug: p.slug,
+    price: p.price,
+    discount: p.discount,
+    images: p.images,
+    artisan: p.artisan,
+    rating: p.rating,
+    reviewCount: p.reviewCount,
+    stock: p.stock,
+    category: p.category,
+    featured: p.featured,
+    trending: p.trending,
+    bestSeller: p.bestSeller,
+  };
+}
+
 export default async function HomePage() {
-  const [categories, featured, trending, bestsellers] = await Promise.all([
-    prisma.category.findMany({ orderBy: { name: "asc" } }),
-    prisma.product.findMany({
-      where: { featured: true },
-      take: 4,
-      include: { category: { select: { name: true, slug: true } } },
-    }),
-    prisma.product.findMany({
-      where: { trending: true },
-      take: 4,
-      include: { category: { select: { name: true, slug: true } } },
-    }),
-    prisma.product.findMany({
-      where: { bestSeller: true },
-      take: 4,
-      include: { category: { select: { name: true, slug: true } } },
-    }),
-  ]);
+  const categories = getCatalogCategories();
+  const featured = catalogProducts.filter((p) => p.featured).slice(0, 4).map(toCard);
+  const trending = catalogProducts.filter((p) => p.trending).slice(0, 4).map(toCard);
+  const bestsellers = catalogProducts.filter((p) => p.bestSeller).slice(0, 4).map(toCard);
 
   const artisans = [
     ...new Map(
-      [...featured, ...trending].map((p) => [
+      catalogProducts.slice(0, 8).map((p) => [
         p.artisan,
-        { name: p.artisan, image: p.images[0], category: p.category.name },
+        { name: p.artisan, image: p.images[0], category: p.category?.name || "" },
       ])
     ).values(),
   ].slice(0, 4);
 
   return (
     <div>
-      {/* Hero — full-bleed, brand-first */}
       <section className="relative min-h-[92vh] w-full overflow-hidden">
         <Image
           src="https://images.unsplash.com/photo-1618220179428-22790b461013?w=2000&q=80"
@@ -116,7 +122,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Categories */}
       <section id="collections" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <FadeIn>
           <div className="mb-10 max-w-xl">
@@ -134,7 +139,7 @@ export default async function HomePage() {
                 className="image-zoom group relative block aspect-[4/5] overflow-hidden rounded-2xl"
               >
                 <Image
-                  src={category.image || featured[0]?.images[0]}
+                  src={category.image}
                   alt={category.name}
                   fill
                   className="object-cover"
@@ -150,7 +155,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Featured products */}
       <section className="texture-bg py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10 flex items-end justify-between gap-4">
@@ -162,31 +166,30 @@ export default async function HomePage() {
               <Link href="/shop">View all</Link>
             </Button>
           </div>
-          <ProductGrid products={featured.map(serializeProduct)} />
+          <ProductGrid products={featured} />
         </div>
       </section>
 
-      {/* Trending */}
       <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="mb-10">
           <h2 className="font-display text-3xl sm:text-4xl">Trending Handmade Items</h2>
-          <p className="mt-3 text-muted-foreground">What collectors are bringing home this season.</p>
+          <p className="mt-3 text-muted-foreground">
+            What collectors are bringing home this season.
+          </p>
         </div>
-        <ProductGrid products={trending.map(serializeProduct)} />
+        <ProductGrid products={trending} />
       </section>
 
-      {/* Bestsellers strip */}
       <section className="border-y border-border bg-secondary/40 py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-10">
             <h2 className="font-display text-3xl sm:text-4xl">Bestsellers</h2>
             <p className="mt-3 text-muted-foreground">Beloved pieces, again and again.</p>
           </div>
-          <ProductGrid products={bestsellers.map(serializeProduct)} />
+          <ProductGrid products={bestsellers} />
         </div>
       </section>
 
-      {/* Artisans */}
       <section id="artisans" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <FadeIn>
           <div className="mb-10 max-w-xl">
@@ -219,7 +222,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Why handmade */}
       <section id="why-handmade" className="texture-bg py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto mb-12 max-w-2xl text-center">
@@ -250,7 +252,9 @@ export default async function HomePage() {
                 <div className="rounded-2xl bg-background/70 p-8 text-center shadow-[var(--shadow-soft)]">
                   <item.icon className="mx-auto h-8 w-8 text-accent" />
                   <h3 className="mt-4 font-display text-2xl">{item.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{item.text}</p>
+                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                    {item.text}
+                  </p>
                 </div>
               </FadeIn>
             ))}
@@ -258,7 +262,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Testimonials */}
       <section id="testimonials" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
         <div className="mb-10 text-center">
           <h2 className="font-display text-3xl sm:text-4xl">Stories from Home</h2>
@@ -278,7 +281,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Instagram gallery */}
       <section className="pb-8">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 flex items-end justify-between">
