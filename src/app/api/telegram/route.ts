@@ -246,53 +246,47 @@ Prices are in <b>INR (₹)</b>.
 /add — add product (multi-line or photo + caption)
 
 <b>Categories</b>
-/categories — list categories
+/categories — list + add / edit / remove
 /addcategory — add a category
 /setcategory &lt;slug&gt; — rename or change image
-/rmcategory — remove a category (tappable list)
-/nav — top header + category manager (add / edit / remove)
-/setnav — change a top header slot (creates category if needed)
-/addcategory — add a category
-/setcategory &lt;slug&gt; — rename or change image
-/rmcategory — remove a category (tappable list)
+/rmcategory — remove a category
 
-Each product can have <b>up to ${MAX_PRODUCT_IMAGES} photos</b> and <b>1 video</b>.
-Manage the top bar + collections with <b>/nav</b>.`;
+<b>Top header</b>
+/nav — edit the 4 top links (Shop, Bestsellers, collections)
+
+Each product can have <b>up to ${MAX_PRODUCT_IMAGES} photos</b> and <b>1 video</b>.`;
 }
 
 function describeNavSlot(slot: TopNavSlot, i: number) {
-  if (slot.type === "shop") return `${i + 1}. <b>${slot.label}</b> — Shop all`;
+  if (slot.type === "shop") return `${i + 1}. <b>${slot.label || "Shop"}</b> → all products`;
   if (slot.type === "bestsellers") {
-    return `${i + 1}. <b>${slot.label}</b> — Bestsellers`;
+    return `${i + 1}. <b>${slot.label || "Bestsellers"}</b> → bestsellers`;
   }
-  return `${i + 1}. <b>${slot.label}</b> — collection <code>${slot.categorySlug}</code>`;
+  return `${i + 1}. <b>${slot.label}</b> → /shop?category=${slot.categorySlug}`;
 }
 
+/** Top-nav slots only — no category dump. */
 function listTopNav(data: CatalogData) {
   const slots = ensureTopNav(data);
   return (
-    `<b>Top header + collections</b>\n\n` +
-    slots.map((s, i) => describeNavSlot(s, i)).join("\n") +
-    `\n\n` +
-    listCategories(data)
+    `<b>Top header links</b>\n` +
+    `Tap a button below to change that link.\n\n` +
+    slots.map((s, i) => describeNavSlot(s, i)).join("\n")
   );
 }
 
-function buildNavHubKeyboard() {
+function buildNavHubKeyboard(data: CatalogData) {
+  const slots = ensureTopNav(data);
+  const slotButtons: InlineButton[] = slots.map((s, i) => ({
+    text: truncateLabel(`${i + 1}. ${s.label || s.type}`, 28),
+    callback_data: `navpick:${i}`,
+  }));
+  // Two rows of two for readability
   return {
     inline_keyboard: [
-      [
-        { text: "Slot 1", callback_data: "navpick:0" },
-        { text: "Slot 2", callback_data: "navpick:1" },
-        { text: "Slot 3", callback_data: "navpick:2" },
-        { text: "Slot 4", callback_data: "navpick:3" },
-      ],
-      [
-        { text: "Add category", callback_data: "navmanage:add" },
-        { text: "Edit category", callback_data: "navmanage:edit" },
-      ],
-      [{ text: "Remove category", callback_data: "navmanage:remove" }],
-      [{ text: "Close", callback_data: "navcancel" }],
+      slotButtons.slice(0, 2),
+      slotButtons.slice(2, 4),
+      [{ text: "Refresh", callback_data: "navrefresh" }],
     ],
   };
 }
@@ -323,54 +317,67 @@ function buildCollectionPicker(productId: string, catalog: CatalogData) {
   return { inline_keyboard: rows };
 }
 
-function buildNavSlotPicker() {
-  return {
-    inline_keyboard: [
-      [
-        { text: "1", callback_data: "navpick:0" },
-        { text: "2", callback_data: "navpick:1" },
-        { text: "3", callback_data: "navpick:2" },
-        { text: "4", callback_data: "navpick:3" },
-      ],
-      [{ text: "Cancel", callback_data: "navcancel" }],
-    ],
-  };
-}
-
 function buildNavTypePicker(slotIndex: number, catalog: CatalogData) {
+  const current = ensureTopNav(catalog)[slotIndex];
   const rows: InlineButton[][] = [
     [
       { text: "Shop", callback_data: `navtype:${slotIndex}:shop` },
       { text: "Bestsellers", callback_data: `navtype:${slotIndex}:best` },
     ],
   ];
-  for (const c of catalog.categories.slice(0, 20)) {
+  for (const c of catalog.categories.slice(0, 24)) {
+    const mark =
+      current?.type === "category" && current.categorySlug === c.slug
+        ? "✓ "
+        : "";
     rows.push([
       {
-        text: truncateLabel(`Collection: ${c.name}`),
+        text: truncateLabel(`${mark}${c.name}`),
         callback_data: `navcat:${slotIndex}:${c.slug}`,
       },
     ]);
   }
-  rows.push([
-    {
-      text: "New collection…",
-      callback_data: `navnewcat:${slotIndex}`,
-    },
-  ]);
-  rows.push([{ text: "Cancel", callback_data: "navcancel" }]);
+  rows.push([{ text: "« Back", callback_data: "navrefresh" }]);
   return { inline_keyboard: rows };
+}
+
+function navTypePickerIntro(slotIndex: number, catalog: CatalogData) {
+  const current = ensureTopNav(catalog)[slotIndex];
+  const now =
+    current?.type === "shop"
+      ? "Shop"
+      : current?.type === "bestsellers"
+        ? "Bestsellers"
+        : current?.label || current?.categorySlug || "?";
+  return (
+    `<b>Edit top link ${slotIndex + 1}</b>\n` +
+    `Now: <b>${now}</b>\n\n` +
+    `Choose Shop, Bestsellers, or a collection:`
+  );
+}
+
+function buildCategoriesHubKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "Add category", callback_data: "navmanage:add" },
+        { text: "Edit category", callback_data: "navmanage:edit" },
+      ],
+      [{ text: "Remove category", callback_data: "navmanage:remove" }],
+      [{ text: "Close", callback_data: "navcancel" }],
+    ],
+  };
 }
 
 function buildCategoryEditPicker(catalog: CatalogData) {
   const cats = catalog.categories.slice(0, 30);
   const inline_keyboard: InlineButton[][] = cats.map((c) => [
     {
-      text: truncateLabel(`Edit: ${c.name}`),
+      text: truncateLabel(c.name),
       callback_data: `navedit:${c.slug}`,
     },
   ]);
-  inline_keyboard.push([{ text: "Cancel", callback_data: "navcancel" }]);
+  inline_keyboard.push([{ text: "« Back", callback_data: "cathub" }]);
   return { inline_keyboard };
 }
 
@@ -414,7 +421,7 @@ function buildCategoryRemovePicker(catalog: CatalogData) {
       callback_data: `catrmpick:${c.id}`,
     },
   ]);
-  inline_keyboard.push([{ text: "Cancel", callback_data: "catrmno" }]);
+  inline_keyboard.push([{ text: "« Back", callback_data: "cathub" }]);
   return { inline_keyboard };
 }
 
@@ -584,8 +591,14 @@ export async function POST(req: Request) {
       }
 
       if (data === "catrmno") {
+        const catalog = await loadCatalog();
         await answerCallback(cb.id, "Cancelled");
-        await editMessage(chatId, messageId, "Category remove cancelled.");
+        await editMessage(
+          chatId,
+          messageId,
+          `${listCategories(catalog)}\n\nManage categories:`,
+          buildCategoriesHubKeyboard()
+        );
         return NextResponse.json({ ok: true });
       }
 
@@ -645,7 +658,8 @@ export async function POST(req: Request) {
         await editMessage(
           chatId,
           messageId,
-          `Removed category <b>${result.name}</b>\n<code>${result.slug}</code>`
+          `Removed category <b>${result.name}</b>\n<code>${result.slug}</code>\n\n${listCategories(await loadCatalog())}`,
+          buildCategoriesHubKeyboard()
         );
         return NextResponse.json({ ok: true });
       }
@@ -659,7 +673,31 @@ export async function POST(req: Request) {
             ? "Kept current collection."
             : data === "pinnavskip"
               ? "Skipped top-nav pin."
-              : "Cancelled."
+              : "Closed."
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "navrefresh") {
+        const catalog = await loadCatalog();
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          listTopNav(catalog),
+          buildNavHubKeyboard(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "cathub") {
+        const catalog = await loadCatalog();
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `${listCategories(catalog)}\n\nManage categories:`,
+          buildCategoriesHubKeyboard()
         );
         return NextResponse.json({ ok: true });
       }
@@ -669,10 +707,10 @@ export async function POST(req: Request) {
         await editMessage(
           chatId,
           messageId,
-          `Add a category — send:\n\n<code>/addcategory
-name: Ceramics
-slug: ceramics
-pin: 3</code>\n\n<code>pin</code> is optional (1–4) to put it in the top header.\nOr send a <b>photo</b> with that caption.`
+          `Send one message:\n\n<code>/addcategory\nname: Ceramics\npin: 3</code>\n\n<code>pin</code> (1–4) is optional.`,
+          {
+            inline_keyboard: [[{ text: "« Back", callback_data: "cathub" }]],
+          }
         );
         return NextResponse.json({ ok: true });
       }
@@ -688,7 +726,7 @@ pin: 3</code>\n\n<code>pin</code> is optional (1–4) to put it in the top heade
         await editMessage(
           chatId,
           messageId,
-          "Pick a category to edit:",
+          "Pick a category to rename / change image:",
           buildCategoryEditPicker(catalog)
         );
         return NextResponse.json({ ok: true });
@@ -705,7 +743,7 @@ pin: 3</code>\n\n<code>pin</code> is optional (1–4) to put it in the top heade
         await editMessage(
           chatId,
           messageId,
-          "Tap a category to remove (only empty ones can be deleted):",
+          "Tap a category to remove (must have 0 products):",
           buildCategoryRemovePicker(catalog)
         );
         return NextResponse.json({ ok: true });
@@ -717,23 +755,10 @@ pin: 3</code>\n\n<code>pin</code> is optional (1–4) to put it in the top heade
         await editMessage(
           chatId,
           messageId,
-          `Edit <code>${slug}</code> — send:\n\n<code>/setcategory ${slug}
-name: New Name
-image: https://...</code>\n\nOr send a <b>photo</b> with caption <code>/setcategory ${slug}</code>\nThen pick a top-nav slot if asked.`
-        );
-        return NextResponse.json({ ok: true });
-      }
-
-      if (data.startsWith("navnewcat:")) {
-        const slotIndex = Number(data.slice("navnewcat:".length));
-        const slotNum = slotIndex + 1;
-        await answerCallback(cb.id);
-        await editMessage(
-          chatId,
-          messageId,
-          `Create a collection and pin it to slot <b>${slotNum}</b> — send:\n\n<code>/addcategory
-name: Your Collection
-pin: ${slotNum}</code>\n\nOr send a photo with that caption.`
+          `Rename / change image — send:\n\n<code>/setcategory ${slug}\nname: New Name</code>\n\nOr a photo with caption <code>/setcategory ${slug}</code>`,
+          {
+            inline_keyboard: [[{ text: "« Back", callback_data: "cathub" }]],
+          }
         );
         return NextResponse.json({ ok: true });
       }
@@ -762,8 +787,13 @@ pin: ${slotNum}</code>\n\nOr send a photo with that caption.`
           await editMessage(chatId, messageId, `Failed to save: ${saved.error}`);
           return NextResponse.json({ ok: true });
         }
-        await answerCallback(cb.id, "Pinned");
-        await editMessage(chatId, messageId, listTopNav(catalog));
+        await answerCallback(cb.id, "Saved");
+        await editMessage(
+          chatId,
+          messageId,
+          listTopNav(catalog),
+          buildNavHubKeyboard(catalog)
+        );
         return NextResponse.json({ ok: true });
       }
 
@@ -775,7 +805,7 @@ pin: ${slotNum}</code>\n\nOr send a photo with that caption.`
         await editMessage(
           chatId,
           messageId,
-          `Set top-nav slot <b>${slotIndex + 1}</b> to:`,
+          navTypePickerIntro(slotIndex, catalog),
           buildNavTypePicker(slotIndex, catalog)
         );
         return NextResponse.json({ ok: true });
@@ -803,8 +833,13 @@ pin: ${slotNum}</code>\n\nOr send a photo with that caption.`
           await editMessage(chatId, messageId, `Failed to save: ${saved.error}`);
           return NextResponse.json({ ok: true });
         }
-        await answerCallback(cb.id, "Updated");
-        await editMessage(chatId, messageId, listTopNav(catalog));
+        await answerCallback(cb.id, "Saved");
+        await editMessage(
+          chatId,
+          messageId,
+          listTopNav(catalog),
+          buildNavHubKeyboard(catalog)
+        );
         return NextResponse.json({ ok: true });
       }
 
@@ -831,8 +866,13 @@ pin: ${slotNum}</code>\n\nOr send a photo with that caption.`
           await editMessage(chatId, messageId, `Failed to save: ${saved.error}`);
           return NextResponse.json({ ok: true });
         }
-        await answerCallback(cb.id, "Updated");
-        await editMessage(chatId, messageId, listTopNav(catalog));
+        await answerCallback(cb.id, "Saved");
+        await editMessage(
+          chatId,
+          messageId,
+          listTopNav(catalog),
+          buildNavHubKeyboard(catalog)
+        );
         return NextResponse.json({ ok: true });
       }
 
@@ -924,7 +964,11 @@ pin: ${slotNum}</code>\n\nOr send a photo with that caption.`
     }
 
     if (cmd === "/categories") {
-      await sendMessage(chatId, listCategories(catalog));
+      await sendMessage(
+        chatId,
+        `${listCategories(catalog)}\n\nManage categories:`,
+        buildCategoriesHubKeyboard()
+      );
       return NextResponse.json({ ok: true });
     }
 
@@ -1083,22 +1127,20 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
     if (cmd === "/nav" || cmd === "/topnav") {
       await sendMessage(
         chatId,
-        `${listTopNav(catalog)}\n\nTap a <b>slot</b> to change it, or manage categories:`,
-        buildNavHubKeyboard()
+        listTopNav(catalog),
+        buildNavHubKeyboard(catalog)
       );
       return NextResponse.json({ ok: true });
     }
 
     if (cmd === "/setnav") {
-      // /setnav → hub
-      // /setnav 3
+      // /setnav → same as /nav hub
       // /setnav 3 shop | bestsellers | home-decor | Home decor
-      // Unknown names are auto-created as categories then pinned.
       if (!rest.length) {
         await sendMessage(
           chatId,
-          `${listTopNav(catalog)}\n\nTap a slot to change, or manage categories:`,
-          buildNavHubKeyboard()
+          listTopNav(catalog),
+          buildNavHubKeyboard(catalog)
         );
         return NextResponse.json({ ok: true });
       }
@@ -1107,7 +1149,7 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
       if (!Number.isFinite(slotNum) || slotNum < 1 || slotNum > 4) {
         await sendMessage(
           chatId,
-          "Usage:\n<code>/nav</code> — manager\n<code>/setnav 3 home-decor</code>\n<code>/setnav 3 Ceramics</code> (creates if missing)\n<code>/setnav 1 shop</code>"
+          "Usage:\n<code>/nav</code> — tap a link to change it\n<code>/setnav 3 home-decor</code>\n<code>/setnav 1 shop</code>"
         );
         return NextResponse.json({ ok: true });
       }
@@ -1116,7 +1158,7 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
       if (!query) {
         await sendMessage(
           chatId,
-          `Set top-nav slot <b>${slotNum}</b> to:`,
+          navTypePickerIntro(slotIndex, catalog),
           buildNavTypePicker(slotIndex, catalog)
         );
         return NextResponse.json({ ok: true });
@@ -1153,7 +1195,7 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
           }
           catalog.categories.push(created.category);
           catIdx = catalog.categories.length - 1;
-          createdNote = `\nCreated category <b>${created.category.name}</b> (<code>${created.category.slug}</code>).`;
+          createdNote = `\nCreated <b>${created.category.name}</b>.`;
         }
         const cat = catalog.categories[catIdx];
         applied = setTopNavSlot(catalog, slotIndex, {
@@ -1175,7 +1217,11 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
         await sendMessage(chatId, `Failed to save: ${saved.error}`);
         return NextResponse.json({ ok: true });
       }
-      await sendMessage(chatId, listTopNav(catalog) + createdNote);
+      await sendMessage(
+        chatId,
+        listTopNav(catalog) + createdNote,
+        buildNavHubKeyboard(catalog)
+      );
       return NextResponse.json({ ok: true });
     }
 

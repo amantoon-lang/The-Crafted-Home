@@ -81,37 +81,20 @@ Message your bot:
 | `/addcategory` | add a category |
 | `/setcategory &lt;slug&gt;` | rename or change category image |
 | `/rmcategory` | remove an empty category |
-| `/nav` | top header + category manager |
-| `/setnav` | change a top header slot (creates category if needed) |
+| `/categories` | list + add / edit / remove categories |
+| `/nav` | edit the 4 top header links |
+| `/setnav 3 home-decor` | set a top link by text |
 | `/add` | multi-line add (see below) |
 
-### Top header links + categories
+### Top header links (`/nav`)
 
-Send `/nav` for a control panel:
+Send **`/nav`**. You get the four current links as buttons (e.g. `1. Shop`, `3. Home furnishing`).
 
-- Tap **Slot 1–4** to set Shop / Bestsellers / an existing collection / **New collection**
-- **Add category** / **Edit category** / **Remove category**
+1. Tap the link you want to change  
+2. Tap **Shop**, **Bestsellers**, or a collection  
+3. The list refreshes — tap another link to keep editing  
 
-```text
-/nav
-/setnav 3 home-decor
-/setnav 3 Ceramics
-/setnav 1 shop
-/setnav 2 bestsellers
-```
-
-`/setnav 3 Ceramics` creates the **Ceramics** category if it does not exist, then pins it to slot 3.
-
-Add + pin in one step:
-
-```text
-/addcategory
-name: Ceramics
-slug: ceramics
-pin: 3
-```
-
-When you upload a collection image (`/setcategory …` + photo), the bot still asks which slot to pin.
+Categories are managed separately with **`/categories`** (Add / Edit / Remove).
 
 ### Product photos & video
 
