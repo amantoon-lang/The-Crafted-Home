@@ -20,7 +20,19 @@ type TelegramUpdate = {
     from?: { id: number; username?: string; first_name?: string };
     photo?: { file_id: string; file_unique_id: string }[];
   };
+  callback_query?: {
+    id: string;
+    data?: string;
+    from?: { id: number; username?: string; first_name?: string };
+    message?: {
+      message_id: number;
+      chat: { id: number; type: string };
+      text?: string;
+    };
+  };
 };
+
+type InlineButton = { text: string; callback_data: string };
 
 function adminIds(): Set<string> {
   return new Set(
@@ -66,7 +78,11 @@ function botToken() {
   return process.env.TELEGRAM_BOT_TOKEN || "";
 }
 
-async function sendMessage(chatId: number, text: string) {
+async function sendMessage(
+  chatId: number,
+  text: string,
+  replyMarkup?: { inline_keyboard: InlineButton[][] }
+) {
   const token = botToken();
   if (!token) return;
   await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -77,8 +93,63 @@ async function sendMessage(chatId: number, text: string) {
       text,
       parse_mode: "HTML",
       disable_web_page_preview: true,
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
     }),
   });
+}
+
+async function answerCallback(callbackQueryId: string, text?: string) {
+  const token = botToken();
+  if (!token) return;
+  await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      callback_query_id: callbackQueryId,
+      text,
+      show_alert: false,
+    }),
+  });
+}
+
+async function editMessage(
+  chatId: number,
+  messageId: number,
+  text: string,
+  replyMarkup?: { inline_keyboard: InlineButton[][] }
+) {
+  const token = botToken();
+  if (!token) return;
+  await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+    }),
+  });
+}
+
+function truncateLabel(text: string, max = 56) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= max) return clean;
+  return `${clean.slice(0, max - 1)}…`;
+}
+
+function buildRemovePicker(catalog: CatalogData) {
+  const products = catalog.products.slice(0, 40);
+  const inline_keyboard: InlineButton[][] = products.map((p) => [
+    {
+      text: truncateLabel(`🗑 ${p.title} · ${formatCurrency(p.price)}`),
+      callback_data: `rmpick:${p.id}`,
+    },
+  ]);
+  inline_keyboard.push([{ text: "Cancel", callback_data: "rmno" }]);
+  return { inline_keyboard };
 }
 
 /** Download a Telegram photo and re-host it in the repo (never store bot-token URLs). */
@@ -122,10 +193,10 @@ Prices are in <b>INR (₹)</b>.
 /price &lt;slug&gt; &lt;amount&gt; — set price in ₹
 /stock &lt;slug&gt; &lt;qty&gt; — set stock
 /discount &lt;slug&gt; &lt;percent&gt; — set discount %
-/image &lt;slug&gt; &lt;url&gt; — set main image URL
-/delete &lt;slug&gt; — remove product
+/image &lt;slug&gt; — send photo with this caption, or /image &lt;slug&gt; &lt;url&gt;
+/remove — show a tappable list to delete a listing (alias: /delete)
 /categories — list category slugs
-/add — add product (send as multi-line message):
+/add — add product (multi-line or photo + caption)
 
 <code>/add
 title: Blue Ceramic Vase
@@ -133,10 +204,7 @@ price: 2499
 category: ceramics
 artisan: Priya
 stock: 12
-description: Handmade vase
-image: https://...</code>
-
-Or send a <b>photo</b> with caption using the same key:value lines (include title + price).`;
+description: Handmade vase</code>`;
 }
 
 function listProducts(data: CatalogData) {
@@ -147,6 +215,33 @@ function listProducts(data: CatalogData) {
         `${i + 1}. <b>${p.title}</b>\n   ${formatCurrency(p.price)} · stock ${p.stock}\n   <code>${p.slug}</code>`
     )
     .join("\n\n");
+}
+
+function findProductIndex(data: CatalogData, query: string): number {
+  const q = query.trim().toLowerCase();
+  if (!q) return -1;
+  const bySlug = data.products.findIndex((p) => p.slug.toLowerCase() === q);
+  if (bySlug !== -1) return bySlug;
+  const exactTitle = data.products.findIndex((p) => p.title.toLowerCase() === q);
+  if (exactTitle !== -1) return exactTitle;
+  return data.products.findIndex((p) => p.title.toLowerCase().includes(q));
+}
+
+async function removeProductById(
+  productId: string,
+  actor: string
+): Promise<{ ok: boolean; title?: string; slug?: string; error?: string }> {
+  const catalog = await loadCatalog();
+  const idx = catalog.products.findIndex((p) => p.id === productId);
+  if (idx === -1) return { ok: false, error: "Product not found (maybe already removed)." };
+  const removed = catalog.products[idx];
+  catalog.products.splice(idx, 1);
+  const saved = await saveCatalog(
+    catalog,
+    `telegram: remove ${removed.slug} by ${actor}`
+  );
+  if (!saved.ok) return { ok: false, error: saved.error || "Failed to save" };
+  return { ok: true, title: removed.title, slug: removed.slug };
 }
 
 export async function POST(req: Request) {
@@ -167,6 +262,94 @@ export async function POST(req: Request) {
   }
 
   const update = (await req.json()) as TelegramUpdate;
+
+  // Inline button presses (delete picker)
+  if (update.callback_query) {
+    const cb = update.callback_query;
+    const chatId = cb.message?.chat.id;
+    const messageId = cb.message?.message_id;
+    const fromId = String(cb.from?.id || "");
+    const data = cb.data || "";
+
+    if (chatId == null || messageId == null) {
+      await answerCallback(cb.id);
+      return NextResponse.json({ ok: true });
+    }
+
+    if (!isAuthorized(fromId, chatId)) {
+      await answerCallback(cb.id, "Not authorized");
+      return NextResponse.json({ ok: true });
+    }
+
+    try {
+      if (data === "rmno") {
+        await answerCallback(cb.id, "Cancelled");
+        await editMessage(chatId, messageId, "Remove cancelled.");
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("rmpick:")) {
+        const productId = data.slice("rmpick:".length);
+        const catalog = await loadCatalog();
+        const product = catalog.products.find((p) => p.id === productId);
+        if (!product) {
+          await answerCallback(cb.id, "Not found");
+          await editMessage(
+            chatId,
+            messageId,
+            "That listing is gone. Send /remove again."
+          );
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `Delete <b>${product.title}</b>?\n<code>${product.slug}</code>\n${formatCurrency(product.price)}`,
+          {
+            inline_keyboard: [
+              [
+                { text: "Yes, delete", callback_data: `rmyes:${product.id}` },
+                { text: "Cancel", callback_data: "rmno" },
+              ],
+            ],
+          }
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("rmyes:")) {
+        const productId = data.slice("rmyes:".length);
+        const result = await removeProductById(
+          productId,
+          cb.from?.username || fromId
+        );
+        if (!result.ok) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(
+            chatId,
+            messageId,
+            `Could not remove listing: ${result.error}`
+          );
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id, "Deleted");
+        await editMessage(
+          chatId,
+          messageId,
+          `Removed <b>${result.title}</b>\n<code>${result.slug}</code>`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      await answerCallback(cb.id);
+    } catch (e) {
+      console.error(e);
+      await answerCallback(cb.id, "Error");
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   const message = update.message;
   if (!message) return NextResponse.json({ ok: true });
 
@@ -318,23 +501,45 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    if (cmd === "/delete") {
-      const slug = rest[0];
-      const before = catalog.products.length;
-      catalog.products = catalog.products.filter((p) => p.slug !== slug);
-      if (catalog.products.length === before) {
-        await sendMessage(chatId, `Product not found: <code>${slug || "?"}</code>`);
+    if (cmd === "/delete" || cmd === "/remove") {
+      const query = rest.join(" ").trim();
+
+      // No argument → show tappable list
+      if (!query) {
+        if (!catalog.products.length) {
+          await sendMessage(chatId, "Catalog is empty — nothing to remove.");
+          return NextResponse.json({ ok: true });
+        }
+        await sendMessage(
+          chatId,
+          "Tap a listing to remove it:",
+          buildRemovePicker(catalog)
+        );
         return NextResponse.json({ ok: true });
       }
-      const saved = await saveCatalog(
-        catalog,
-        `telegram: delete ${slug} by ${message.from?.username || fromId}`
+
+      const idx = findProductIndex(catalog, query);
+      if (idx === -1) {
+        await sendMessage(
+          chatId,
+          `No listing found for <code>${query}</code>\nSend /remove to pick from a list.`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      const product = catalog.products[idx];
+      await sendMessage(
+        chatId,
+        `Delete <b>${product.title}</b>?\n<code>${product.slug}</code>\n${formatCurrency(product.price)}`,
+        {
+          inline_keyboard: [
+            [
+              { text: "Yes, delete", callback_data: `rmyes:${product.id}` },
+              { text: "Cancel", callback_data: "rmno" },
+            ],
+          ],
+        }
       );
-      if (!saved.ok) {
-        await sendMessage(chatId, `Failed to save: ${saved.error}`);
-        return NextResponse.json({ ok: true });
-      }
-      await sendMessage(chatId, `Deleted <code>${slug}</code>`);
       return NextResponse.json({ ok: true });
     }
 

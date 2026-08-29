@@ -66,9 +66,21 @@ Message your bot:
 | `/stock hand-carved-oak-serving-board 20` | set stock |
 | `/discount hand-carved-oak-serving-board 10` | 10% off |
 | `/image slug https://...` | change image |
-| `/delete slug` | remove product |
+| `/remove` or `/delete` | tappable list of products to delete |
+| `/remove &lt;slug or title&gt;` | confirm delete for that listing |
 | `/categories` | category slugs |
 | `/add` | multi-line add (see below) |
+
+### Delete a listing
+
+Send `/remove` or `/delete` with **no arguments** — the bot lists every product as tappable buttons. Tap one, then confirm **Yes, delete** or **Cancel**.
+
+You can also delete by slug or title:
+
+```text
+/remove wooden-mirror
+/delete Blue Ceramic Vase
+```
 
 ### Add a product
 
