@@ -2,7 +2,7 @@
   "categories": [
     {
       "id": "cat-wooden",
-      "name": "Decor",
+      "name": "Home Decor",
       "slug": "wooden-decor",
       "image": "https://raw.githubusercontent.com/amantoon-lang/The-Crafted-Home/main/public/catalog-images/wooden-decor-1788017158259.jpg"
     },
@@ -42,7 +42,7 @@
       "bestSeller": false,
       "categoryId": "cat-wooden",
       "category": {
-        "name": "Decor",
+        "name": "Home Decor",
         "slug": "wooden-decor"
       },
       "createdAt": "2026-08-29T13:40:52.140Z",
@@ -70,7 +70,7 @@
       "bestSeller": false,
       "categoryId": "cat-wooden",
       "category": {
-        "name": "Decor",
+        "name": "Home Decor",
         "slug": "wooden-decor"
       },
       "createdAt": "2026-08-29T13:36:17.761Z",
@@ -98,7 +98,7 @@
       "bestSeller": false,
       "categoryId": "cat-wooden",
       "category": {
-        "name": "Decor",
+        "name": "Home Decor",
         "slug": "wooden-decor"
       },
       "createdAt": "2026-08-29T13:09:09.294Z",
