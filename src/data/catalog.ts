@@ -33,11 +33,38 @@ export type TopNavSlot = {
   categorySlug?: string;
 };
 
+/** Homepage blocks that can be toggled / curated via Telegram `/home`. */
+export type HomeSectionKey =
+  | "hero"
+  | "collections"
+  | "featured"
+  | "trending"
+  | "bestsellers"
+  | "artisans"
+  | "whyHandmade"
+  | "testimonials"
+  | "atelier";
+
+export type HomeSectionConfig = {
+  visible: boolean;
+  /**
+   * Explicit picks. Empty = automatic defaults on the homepage.
+   * - collections → category ids
+   * - hero / featured / trending / bestsellers / artisans / atelier → product ids
+   * - whyHandmade / testimonials → unused (visibility only)
+   */
+  itemIds: string[];
+};
+
+export type HomeSectionsConfig = Record<HomeSectionKey, HomeSectionConfig>;
+
 export type CatalogData = {
   categories: CatalogCategory[];
   products: CatalogProduct[];
   /** Exactly 4 header links (Shop / Bestsellers / two collections by default). */
   topNav?: TopNavSlot[];
+  /** Homepage section visibility + curated items (Telegram `/home`). */
+  homeSections?: HomeSectionsConfig;
 };
 
 export const DEFAULT_TOP_NAV: TopNavSlot[] = [
@@ -126,6 +153,241 @@ export function clearTopNavCategory(data: CatalogData, categorySlug: string) {
       }
     }
   }
+}
+
+export const HOME_SECTION_META: {
+  key: HomeSectionKey;
+  label: string;
+  /** Short key used in Telegram callback_data */
+  short: string;
+  itemKind: "product" | "category" | "none";
+  /** Max curated items (hero = 1 photo). 0 = no cap for picker UX. */
+  maxItems: number;
+}[] = [
+  { key: "hero", label: "Hero", short: "hero", itemKind: "product", maxItems: 1 },
+  {
+    key: "collections",
+    label: "Featured Collections",
+    short: "collections",
+    itemKind: "category",
+    maxItems: 12,
+  },
+  {
+    key: "featured",
+    label: "Featured Pieces",
+    short: "featured",
+    itemKind: "product",
+    maxItems: 8,
+  },
+  {
+    key: "trending",
+    label: "Trending",
+    short: "trending",
+    itemKind: "product",
+    maxItems: 8,
+  },
+  {
+    key: "bestsellers",
+    label: "Bestsellers",
+    short: "bestsellers",
+    itemKind: "product",
+    maxItems: 8,
+  },
+  {
+    key: "artisans",
+    label: "Featured Artisans",
+    short: "artisans",
+    itemKind: "product",
+    maxItems: 8,
+  },
+  {
+    key: "whyHandmade",
+    label: "Why Buy Handmade",
+    short: "why",
+    itemKind: "none",
+    maxItems: 0,
+  },
+  {
+    key: "testimonials",
+    label: "Stories from Home",
+    short: "stories",
+    itemKind: "none",
+    maxItems: 0,
+  },
+  {
+    key: "atelier",
+    label: "From the Atelier",
+    short: "atelier",
+    itemKind: "product",
+    maxItems: 12,
+  },
+];
+
+const HOME_SHORT_TO_KEY = Object.fromEntries(
+  HOME_SECTION_META.map((m) => [m.short, m.key])
+) as Record<string, HomeSectionKey>;
+
+export function homeSectionKeyFromShort(short: string): HomeSectionKey | null {
+  return HOME_SHORT_TO_KEY[short] || null;
+}
+
+export function homeSectionMeta(key: HomeSectionKey) {
+  return HOME_SECTION_META.find((m) => m.key === key)!;
+}
+
+export const DEFAULT_HOME_SECTIONS: HomeSectionsConfig = {
+  hero: { visible: true, itemIds: [] },
+  collections: { visible: true, itemIds: [] },
+  featured: { visible: true, itemIds: [] },
+  trending: { visible: true, itemIds: [] },
+  bestsellers: { visible: true, itemIds: [] },
+  artisans: { visible: true, itemIds: [] },
+  whyHandmade: { visible: true, itemIds: [] },
+  testimonials: { visible: true, itemIds: [] },
+  atelier: { visible: true, itemIds: [] },
+};
+
+export function ensureHomeSections(data: CatalogData): HomeSectionsConfig {
+  if (!data.homeSections) {
+    data.homeSections = structuredClone(DEFAULT_HOME_SECTIONS);
+    return data.homeSections;
+  }
+  for (const meta of HOME_SECTION_META) {
+    const cur = data.homeSections[meta.key];
+    if (!cur || typeof cur.visible !== "boolean") {
+      data.homeSections[meta.key] = {
+        visible: true,
+        itemIds: Array.isArray(cur?.itemIds) ? cur.itemIds.filter(Boolean) : [],
+      };
+    } else if (!Array.isArray(cur.itemIds)) {
+      cur.itemIds = [];
+    }
+  }
+  return data.homeSections;
+}
+
+export function setHomeSectionVisible(
+  data: CatalogData,
+  key: HomeSectionKey,
+  visible: boolean
+) {
+  const sections = ensureHomeSections(data);
+  sections[key].visible = visible;
+  if (!visible) {
+    // Keep itemIds so turning back on restores the curation
+  }
+}
+
+export function setHomeSectionItems(
+  data: CatalogData,
+  key: HomeSectionKey,
+  itemIds: string[]
+): { error?: string } {
+  const meta = homeSectionMeta(key);
+  if (meta.itemKind === "none") {
+    return { error: "This section has no items to pick." };
+  }
+  const sections = ensureHomeSections(data);
+  const unique = [...new Set(itemIds.filter(Boolean))];
+  if (meta.maxItems > 0 && unique.length > meta.maxItems) {
+    return { error: `Pick at most ${meta.maxItems} items for ${meta.label}.` };
+  }
+  if (meta.itemKind === "category") {
+    const ok = new Set(data.categories.map((c) => c.id));
+    for (const id of unique) {
+      if (!ok.has(id)) return { error: `Unknown category id: ${id}` };
+    }
+  } else {
+    const ok = new Set(data.products.map((p) => p.id));
+    for (const id of unique) {
+      if (!ok.has(id)) return { error: `Unknown product id: ${id}` };
+    }
+  }
+  sections[key].itemIds = unique;
+  return {};
+}
+
+export function toggleHomeSectionItem(
+  data: CatalogData,
+  key: HomeSectionKey,
+  itemId: string
+): { error?: string; selected?: boolean } {
+  const meta = homeSectionMeta(key);
+  if (meta.itemKind === "none") {
+    return { error: "This section has no items to pick." };
+  }
+  const sections = ensureHomeSections(data);
+  const ids = sections[key].itemIds;
+  const idx = ids.indexOf(itemId);
+  if (idx >= 0) {
+    ids.splice(idx, 1);
+    return { selected: false };
+  }
+  if (meta.maxItems === 1) {
+    sections[key].itemIds = [itemId];
+    return { selected: true };
+  }
+  if (meta.maxItems > 0 && ids.length >= meta.maxItems) {
+    return { error: `Max ${meta.maxItems} items for ${meta.label}.` };
+  }
+  if (meta.itemKind === "category") {
+    if (!data.categories.some((c) => c.id === itemId)) {
+      return { error: "Unknown category" };
+    }
+  } else if (!data.products.some((p) => p.id === itemId)) {
+    return { error: "Unknown product" };
+  }
+  ids.push(itemId);
+  return { selected: true };
+}
+
+/** Drop deleted product/category ids from homepage curation. */
+export function pruneHomeSectionItems(data: CatalogData) {
+  const sections = ensureHomeSections(data);
+  const productIds = new Set(data.products.map((p) => p.id));
+  const categoryIds = new Set(data.categories.map((c) => c.id));
+  for (const meta of HOME_SECTION_META) {
+    if (meta.itemKind === "none") continue;
+    const allowed = meta.itemKind === "category" ? categoryIds : productIds;
+    sections[meta.key].itemIds = sections[meta.key].itemIds.filter((id) =>
+      allowed.has(id)
+    );
+  }
+}
+
+/** Resolve products for a curated shelf (order preserved). Empty ids → fallback. */
+export function resolveHomeProducts(
+  data: CatalogData,
+  key: HomeSectionKey,
+  fallback: CatalogProduct[],
+  limit: number
+): CatalogProduct[] {
+  const section = ensureHomeSections(data)[key];
+  if (!section.visible) return [];
+  if (section.itemIds.length) {
+    const byId = new Map(data.products.map((p) => [p.id, p]));
+    return section.itemIds
+      .map((id) => byId.get(id))
+      .filter((p): p is CatalogProduct => Boolean(p))
+      .slice(0, limit);
+  }
+  return fallback.slice(0, limit);
+}
+
+export function resolveHomeCategories(
+  data: CatalogData,
+  limit = 12
+): CatalogCategory[] {
+  const section = ensureHomeSections(data).collections;
+  if (!section.visible) return [];
+  if (section.itemIds.length) {
+    const byId = new Map(data.categories.map((c) => [c.id, c]));
+    return section.itemIds
+      .map((id) => byId.get(id))
+      .filter((c): c is CatalogCategory => Boolean(c))
+      .slice(0, limit);
+  }
+  return data.categories.slice(0, limit);
 }
 
 const CATALOG_PATH = "src/data/catalog.json";
@@ -290,6 +552,8 @@ export async function saveCatalog(
   message: string
 ): Promise<{ ok: boolean; error?: string }> {
   ensureTopNav(data);
+  ensureHomeSections(data);
+  pruneHomeSectionItems(data);
   const saved = await putGithubFile(
     CATALOG_PATH,
     Buffer.from(JSON.stringify(data, null, 2) + "\n").toString("base64"),

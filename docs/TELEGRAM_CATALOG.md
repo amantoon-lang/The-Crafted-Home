@@ -84,7 +84,19 @@ Message your bot:
 | `/categories` | list + add / edit / remove categories |
 | `/nav` | edit the 4 top header links |
 | `/setnav 3 home-decor` | set a top link by text |
+| `/home` | show/hide homepage sections + pick items |
 | `/add` | multi-line add (see below) |
+
+### Homepage sections (`/home`)
+
+Send **`/home`**. You get every homepage block (Hero, Collections, Featured, Trending, Bestsellers, Artisans, Why Handmade, Stories, Atelier).
+
+1. Tap a section  
+2. Tap **Show** or **Hide**  
+3. If you choose **Show** (and the section has items), tap products or categories to curate what appears  
+4. Tap **Done** — empty selection = automatic defaults on the site  
+
+**Why Buy Handmade** and **Stories from Home** are show/hide only (fixed copy).
 
 ### Top header links (`/nav`)
 
