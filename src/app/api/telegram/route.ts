@@ -12,6 +12,7 @@ import {
   MAX_PRODUCT_IMAGES,
   ensureTopNav,
   setTopNavSlot,
+  clearTopNavCategory,
   type CatalogData,
   type TopNavSlot,
 } from "@/data/catalog";
@@ -249,11 +250,14 @@ Prices are in <b>INR (₹)</b>.
 /addcategory — add a category
 /setcategory &lt;slug&gt; — rename or change image
 /rmcategory — remove a category (tappable list)
-/nav — show the 4 top header links
-/setnav — edit a top header slot
+/nav — top header + category manager (add / edit / remove)
+/setnav — change a top header slot (creates category if needed)
+/addcategory — add a category
+/setcategory &lt;slug&gt; — rename or change image
+/rmcategory — remove a category (tappable list)
 
 Each product can have <b>up to ${MAX_PRODUCT_IMAGES} photos</b> and <b>1 video</b>.
-The top bar has <b>4 links</b> you control with /nav.`;
+Manage the top bar + collections with <b>/nav</b>.`;
 }
 
 function describeNavSlot(slot: TopNavSlot, i: number) {
@@ -267,10 +271,30 @@ function describeNavSlot(slot: TopNavSlot, i: number) {
 function listTopNav(data: CatalogData) {
   const slots = ensureTopNav(data);
   return (
-    `<b>Top header links</b> (4 slots)\n\n` +
+    `<b>Top header + collections</b>\n\n` +
     slots.map((s, i) => describeNavSlot(s, i)).join("\n") +
-    `\n\nChange with <code>/setnav 3 ceramics</code> or send /setnav for buttons.`
+    `\n\n` +
+    listCategories(data)
   );
+}
+
+function buildNavHubKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "Slot 1", callback_data: "navpick:0" },
+        { text: "Slot 2", callback_data: "navpick:1" },
+        { text: "Slot 3", callback_data: "navpick:2" },
+        { text: "Slot 4", callback_data: "navpick:3" },
+      ],
+      [
+        { text: "Add category", callback_data: "navmanage:add" },
+        { text: "Edit category", callback_data: "navmanage:edit" },
+      ],
+      [{ text: "Remove category", callback_data: "navmanage:remove" }],
+      [{ text: "Close", callback_data: "navcancel" }],
+    ],
+  };
 }
 
 function buildPinNavKeyboard(categorySlug: string) {
@@ -320,7 +344,7 @@ function buildNavTypePicker(slotIndex: number, catalog: CatalogData) {
       { text: "Bestsellers", callback_data: `navtype:${slotIndex}:best` },
     ],
   ];
-  for (const c of catalog.categories.slice(0, 24)) {
+  for (const c of catalog.categories.slice(0, 20)) {
     rows.push([
       {
         text: truncateLabel(`Collection: ${c.name}`),
@@ -328,8 +352,26 @@ function buildNavTypePicker(slotIndex: number, catalog: CatalogData) {
       },
     ]);
   }
+  rows.push([
+    {
+      text: "New collection…",
+      callback_data: `navnewcat:${slotIndex}`,
+    },
+  ]);
   rows.push([{ text: "Cancel", callback_data: "navcancel" }]);
   return { inline_keyboard: rows };
+}
+
+function buildCategoryEditPicker(catalog: CatalogData) {
+  const cats = catalog.categories.slice(0, 30);
+  const inline_keyboard: InlineButton[][] = cats.map((c) => [
+    {
+      text: truncateLabel(`Edit: ${c.name}`),
+      callback_data: `navedit:${c.slug}`,
+    },
+  ]);
+  inline_keyboard.push([{ text: "Cancel", callback_data: "navcancel" }]);
+  return { inline_keyboard };
 }
 
 function mediaSummary(product: {
@@ -434,6 +476,7 @@ async function removeCategoryById(
     return { ok: false, error: "Keep at least one category." };
   }
   catalog.categories.splice(idx, 1);
+  clearTopNavCategory(catalog, removed.slug);
   const saved = await saveCatalog(
     catalog,
     `telegram: remove category ${removed.slug} by ${actor}`
@@ -617,6 +660,80 @@ export async function POST(req: Request) {
             : data === "pinnavskip"
               ? "Skipped top-nav pin."
               : "Cancelled."
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "navmanage:add") {
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `Add a category — send:\n\n<code>/addcategory
+name: Ceramics
+slug: ceramics
+pin: 3</code>\n\n<code>pin</code> is optional (1–4) to put it in the top header.\nOr send a <b>photo</b> with that caption.`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "navmanage:edit") {
+        const catalog = await loadCatalog();
+        if (!catalog.categories.length) {
+          await answerCallback(cb.id, "None");
+          await editMessage(chatId, messageId, "No categories to edit.");
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          "Pick a category to edit:",
+          buildCategoryEditPicker(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "navmanage:remove") {
+        const catalog = await loadCatalog();
+        if (!catalog.categories.length) {
+          await answerCallback(cb.id, "None");
+          await editMessage(chatId, messageId, "No categories to remove.");
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          "Tap a category to remove (only empty ones can be deleted):",
+          buildCategoryRemovePicker(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("navedit:")) {
+        const slug = data.slice("navedit:".length);
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `Edit <code>${slug}</code> — send:\n\n<code>/setcategory ${slug}
+name: New Name
+image: https://...</code>\n\nOr send a <b>photo</b> with caption <code>/setcategory ${slug}</code>\nThen pick a top-nav slot if asked.`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("navnewcat:")) {
+        const slotIndex = Number(data.slice("navnewcat:".length));
+        const slotNum = slotIndex + 1;
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `Create a collection and pin it to slot <b>${slotNum}</b> — send:\n\n<code>/addcategory
+name: Your Collection
+pin: ${slotNum}</code>\n\nOr send a photo with that caption.`
         );
         return NextResponse.json({ ok: true });
       }
@@ -844,12 +961,31 @@ export async function POST(req: Request) {
           `${created.error || "Could not create category"}\n\n<code>/addcategory
 name: Textiles
 slug: textiles
-image: https://...</code>\n\nOr send a photo with that caption.`
+pin: 3
+image: https://...</code>\n\nOr send a photo with that caption. <code>pin</code> (1–4) is optional.`
         );
         return NextResponse.json({ ok: true });
       }
 
       catalog.categories.push(created.category);
+
+      // Optional pin: 1–4 puts the new category in that top-nav slot
+      const pinRaw = fields.pin || fields.nav || fields.slot;
+      const pinNum = pinRaw ? Number(pinRaw) : NaN;
+      let pinNote = "";
+      if (Number.isFinite(pinNum) && pinNum >= 1 && pinNum <= 4) {
+        const pinned = setTopNavSlot(catalog, pinNum - 1, {
+          type: "category",
+          categorySlug: created.category.slug,
+          label: created.category.name,
+        });
+        if (pinned.error) {
+          pinNote = `\n(Could not pin to slot ${pinNum}: ${pinned.error})`;
+        } else {
+          pinNote = `\nPinned to top-nav slot <b>${pinNum}</b>.`;
+        }
+      }
+
       const saved = await saveCatalog(
         catalog,
         `telegram: add category ${created.category.slug} by ${message.from?.username || fromId}`
@@ -860,14 +996,15 @@ image: https://...</code>\n\nOr send a photo with that caption.`
       }
       await sendMessage(
         chatId,
-        `Added category <b>${created.category.name}</b>\n<code>${created.category.slug}</code>`
+        `Added category <b>${created.category.name}</b>\n<code>${created.category.slug}</code>${pinNote}`
       );
-      // After creating a collection (esp. with image), ask which top-nav slot
-      await sendMessage(
-        chatId,
-        `Where should <b>${created.category.name}</b> appear in the top header?\nPick a slot (or Skip):`,
-        buildPinNavKeyboard(created.category.slug)
-      );
+      if (!Number.isFinite(pinNum)) {
+        await sendMessage(
+          chatId,
+          `Where should <b>${created.category.name}</b> appear in the top header?\nPick a slot (or Skip):`,
+          buildPinNavKeyboard(created.category.slug)
+        );
+      }
       return NextResponse.json({ ok: true });
     }
 
@@ -944,21 +1081,24 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
     }
 
     if (cmd === "/nav" || cmd === "/topnav") {
-      await sendMessage(chatId, listTopNav(catalog));
+      await sendMessage(
+        chatId,
+        `${listTopNav(catalog)}\n\nTap a <b>slot</b> to change it, or manage categories:`,
+        buildNavHubKeyboard()
+      );
       return NextResponse.json({ ok: true });
     }
 
     if (cmd === "/setnav") {
-      // /setnav → button picker
-      // /setnav 3 ceramics
-      // /setnav 3 Wood wooden-decor
-      // /setnav 1 shop
-      // /setnav 2 bestsellers
+      // /setnav → hub
+      // /setnav 3
+      // /setnav 3 shop | bestsellers | home-decor | Home decor
+      // Unknown names are auto-created as categories then pinned.
       if (!rest.length) {
         await sendMessage(
           chatId,
-          `${listTopNav(catalog)}\n\nTap a slot to change:`,
-          buildNavSlotPicker()
+          `${listTopNav(catalog)}\n\nTap a slot to change, or manage categories:`,
+          buildNavHubKeyboard()
         );
         return NextResponse.json({ ok: true });
       }
@@ -967,13 +1107,13 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
       if (!Number.isFinite(slotNum) || slotNum < 1 || slotNum > 4) {
         await sendMessage(
           chatId,
-          "Usage:\n<code>/setnav</code> — pick with buttons\n<code>/setnav 3 ceramics</code>\n<code>/setnav 1 shop</code>\n<code>/setnav 2 bestsellers</code>"
+          "Usage:\n<code>/nav</code> — manager\n<code>/setnav 3 home-decor</code>\n<code>/setnav 3 Ceramics</code> (creates if missing)\n<code>/setnav 1 shop</code>"
         );
         return NextResponse.json({ ok: true });
       }
       const slotIndex = slotNum - 1;
-      const kind = (rest[1] || "").toLowerCase();
-      if (!kind) {
+      const query = rest.slice(1).join(" ").trim();
+      if (!query) {
         await sendMessage(
           chatId,
           `Set top-nav slot <b>${slotNum}</b> to:`,
@@ -982,31 +1122,44 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
         return NextResponse.json({ ok: true });
       }
 
+      const qLower = query.toLowerCase();
       let applied: { error?: string };
-      if (kind === "shop") {
+      let createdNote = "";
+
+      if (qLower === "shop") {
         applied = setTopNavSlot(catalog, slotIndex, {
           type: "shop",
-          label: rest.slice(2).join(" ") || "Shop",
+          label: "Shop",
         });
-      } else if (kind === "bestsellers" || kind === "bestseller" || kind === "best") {
+      } else if (
+        qLower === "bestsellers" ||
+        qLower === "bestseller" ||
+        qLower === "best"
+      ) {
         applied = setTopNavSlot(catalog, slotIndex, {
           type: "bestsellers",
-          label: rest.slice(2).join(" ") || "Bestsellers",
+          label: "Bestsellers",
         });
       } else {
-        // Treat as category slug; optional custom label before slug:
-        // /setnav 3 wooden-decor
-        // /setnav 3 Wood wooden-decor
-        let categorySlug = kind;
-        let label = "";
-        if (rest.length >= 3) {
-          label = rest.slice(1, -1).join(" ");
-          categorySlug = rest[rest.length - 1].toLowerCase();
+        let catIdx = findCategoryIndex(catalog, query);
+        if (catIdx === -1) {
+          const created = createCategoryFromFields(catalog, { name: query });
+          if (created.error || !created.category) {
+            await sendMessage(
+              chatId,
+              created.error || "Could not create category for this slot."
+            );
+            return NextResponse.json({ ok: true });
+          }
+          catalog.categories.push(created.category);
+          catIdx = catalog.categories.length - 1;
+          createdNote = `\nCreated category <b>${created.category.name}</b> (<code>${created.category.slug}</code>).`;
         }
+        const cat = catalog.categories[catIdx];
         applied = setTopNavSlot(catalog, slotIndex, {
           type: "category",
-          categorySlug,
-          label,
+          categorySlug: cat.slug,
+          label: cat.name,
         });
       }
 
@@ -1022,7 +1175,7 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
         await sendMessage(chatId, `Failed to save: ${saved.error}`);
         return NextResponse.json({ ok: true });
       }
-      await sendMessage(chatId, listTopNav(catalog));
+      await sendMessage(chatId, listTopNav(catalog) + createdNote);
       return NextResponse.json({ ok: true });
     }
 
