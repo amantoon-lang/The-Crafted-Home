@@ -253,35 +253,6 @@
       },
       "createdAt": "2026-04-28T00:00:00.000Z",
       "reviews": []
-    },
-    {
-      "id": "prod-candles",
-      "title": "Beeswax Pillar Candle Trio",
-      "slug": "beeswax-pillar-candle-trio",
-      "description": "Slow-burning beeswax pillars with a gentle honey scent — warm ambient light for evenings at home.",
-      "story": "Hand-poured in small batches and cooled overnight for an even burn.",
-      "price": 4499,
-      "discount": 5,
-      "images": [
-        "https://images.unsplash.com/photo-1603006905004-abd84d2429d2?w=1200&q=80",
-        "https://images.unsplash.com/photo-1602607326812-0e5c8d5f0b8e?w=1200&q=80"
-      ],
-      "stock": 55,
-      "artisan": "The Meadow Apothecary",
-      "materials": "100% beeswax, cotton wick, ceramic vessel",
-      "dimensions": "3 × 4 in each",
-      "rating": 4.9,
-      "reviewCount": 88,
-      "featured": true,
-      "trending": true,
-      "bestSeller": true,
-      "categoryId": "cat-candles",
-      "category": {
-        "name": "Candles",
-        "slug": "candles"
-      },
-      "createdAt": "2026-04-15T00:00:00.000Z",
-      "reviews": []
     }
   ]
 }
