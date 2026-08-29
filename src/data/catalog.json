@@ -166,35 +166,6 @@
           }
         }
       ]
-    },
-    {
-      "id": "prod-macrame",
-      "title": "Linen Wall Macrame Tapestry",
-      "slug": "linen-wall-macrame-tapestry",
-      "description": "An airy large-scale macrame piece woven from soft natural cord — softens blank walls with texture and light.",
-      "story": "Knotted over three days, finished with a hand-sanded birch dowel.",
-      "price": 12499,
-      "discount": 0,
-      "images": [
-        "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=1200&q=80",
-        "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1200&q=80"
-      ],
-      "stock": 12,
-      "artisan": "Elena Rojas",
-      "materials": "Natural linen cord, birch dowel",
-      "dimensions": "36 × 48 in",
-      "rating": 4.9,
-      "reviewCount": 67,
-      "featured": true,
-      "trending": true,
-      "bestSeller": false,
-      "categoryId": "cat-macrame",
-      "category": {
-        "name": "Macrame",
-        "slug": "macrame"
-      },
-      "createdAt": "2026-05-20T00:00:00.000Z",
-      "reviews": []
     }
   ]
 }
