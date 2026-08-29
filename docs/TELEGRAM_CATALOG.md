@@ -81,26 +81,37 @@ Message your bot:
 | `/addcategory` | add a category |
 | `/setcategory &lt;slug&gt;` | rename or change category image |
 | `/rmcategory` | remove an empty category |
-| `/nav` | show the 4 top header links |
-| `/setnav` | edit a top header slot |
+| `/nav` | top header + category manager |
+| `/setnav` | change a top header slot (creates category if needed) |
 | `/add` | multi-line add (see below) |
 
-### Top header links (4 slots)
+### Top header links + categories
 
-The site header shows **exactly 4 links** (default: Shop, Bestsellers, Ceramics, Wood). Control them from Telegram:
+Send `/nav` for a control panel:
+
+- Tap **Slot 1–4** to set Shop / Bestsellers / an existing collection / **New collection**
+- **Add category** / **Edit category** / **Remove category**
 
 ```text
 /nav
-/setnav
 /setnav 3 home-decor
-/setnav 3 Wood wooden-decor
+/setnav 3 Ceramics
 /setnav 1 shop
 /setnav 2 bestsellers
 ```
 
-When you **add a collection** (`/addcategory`) or upload a **collection image** (`/setcategory …` + photo), the bot asks which top-nav slot (1–4) should show that collection — or Skip.
+`/setnav 3 Ceramics` creates the **Ceramics** category if it does not exist, then pins it to slot 3.
 
-When you **add a product**, the bot asks which **collection** the item belongs in.
+Add + pin in one step:
+
+```text
+/addcategory
+name: Ceramics
+slug: ceramics
+pin: 3
+```
+
+When you upload a collection image (`/setcategory …` + photo), the bot still asks which slot to pin.
 
 ### Product photos & video
 

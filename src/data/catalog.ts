@@ -108,6 +108,26 @@ export function setTopNavSlot(
   return {};
 }
 
+/** Clear or retarget top-nav slots that pointed at a removed category. */
+export function clearTopNavCategory(data: CatalogData, categorySlug: string) {
+  ensureTopNav(data);
+  const fallback = data.categories[0];
+  for (let i = 0; i < data.topNav!.length; i++) {
+    const slot = data.topNav![i];
+    if (slot.type === "category" && slot.categorySlug === categorySlug) {
+      if (fallback) {
+        data.topNav![i] = {
+          type: "category",
+          categorySlug: fallback.slug,
+          label: fallback.name,
+        };
+      } else {
+        data.topNav![i] = { type: "shop", label: "Shop" };
+      }
+    }
+  }
+}
+
 const CATALOG_PATH = "src/data/catalog.json";
 const IMAGE_DIR = "public/catalog-images";
 const VIDEO_DIR = "public/catalog-videos";
