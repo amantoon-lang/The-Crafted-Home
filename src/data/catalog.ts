@@ -40,10 +40,9 @@ function githubConfig() {
     (process.env.VERCEL_GIT_REPO_OWNER && process.env.VERCEL_GIT_REPO_SLUG
       ? `${process.env.VERCEL_GIT_REPO_OWNER}/${process.env.VERCEL_GIT_REPO_SLUG}`
       : "amantoon-lang/The-Crafted-Home");
-  const branch =
-    process.env.GITHUB_CATALOG_BRANCH ||
-    process.env.VERCEL_GIT_COMMIT_REF ||
-    "main";
+  // Always default to main for catalog reads/writes. Do not use
+  // VERCEL_GIT_COMMIT_REF — preview deploys would otherwise target the wrong branch.
+  const branch = process.env.GITHUB_CATALOG_BRANCH || "main";
   return { token, repo, branch };
 }
 
@@ -130,6 +129,13 @@ export async function saveCatalog(
 
     if (!putRes.ok) {
       const err = await putRes.text();
+      if (putRes.status === 403 || putRes.status === 401) {
+        return {
+          ok: false,
+          error:
+            "GitHub token cannot write to the repo. Use a classic PAT with the `repo` scope (or a fine-grained token with Contents: Read and write on The-Crafted-Home), set GITHUB_TOKEN in Vercel, and redeploy.",
+        };
+      }
       return { ok: false, error: err.slice(0, 300) };
     }
     return { ok: true };
