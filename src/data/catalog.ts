@@ -65,7 +65,119 @@ export type CatalogData = {
   topNav?: TopNavSlot[];
   /** Homepage section visibility + curated items (Telegram `/home`). */
   homeSections?: HomeSectionsConfig;
+  /**
+   * Non-product images + copy for the landing hero and section thumbnails
+   * (Telegram menu 5️⃣ Site Images).
+   */
+  siteMedia?: SiteMediaConfig;
 };
+
+/** Landing hero + homepage section banners (not product photos). */
+export type SiteMediaKey =
+  | "landing"
+  | "collections"
+  | "featured"
+  | "trending"
+  | "bestsellers"
+  | "artisans"
+  | "whyHandmade"
+  | "testimonials"
+  | "atelier";
+
+export type SiteMediaSlot = {
+  /** Hosted image URL (repo or remote). */
+  image?: string;
+  /** Headline / section title override. */
+  text?: string;
+};
+
+export type SiteMediaConfig = Partial<Record<SiteMediaKey, SiteMediaSlot>>;
+
+export const SITE_MEDIA_META: {
+  key: SiteMediaKey;
+  label: string;
+  short: string;
+  kind: "landing" | "section";
+}[] = [
+  { key: "landing", label: "Landing / Hero", short: "landing", kind: "landing" },
+  {
+    key: "collections",
+    label: "Featured Collections",
+    short: "collections",
+    kind: "section",
+  },
+  { key: "featured", label: "Featured Pieces", short: "featured", kind: "section" },
+  { key: "trending", label: "Trending", short: "trending", kind: "section" },
+  {
+    key: "bestsellers",
+    label: "Bestsellers",
+    short: "bestsellers",
+    kind: "section",
+  },
+  { key: "artisans", label: "Featured Artisans", short: "artisans", kind: "section" },
+  {
+    key: "whyHandmade",
+    label: "Why Buy Handmade",
+    short: "why",
+    kind: "section",
+  },
+  {
+    key: "testimonials",
+    label: "Stories from Home",
+    short: "stories",
+    kind: "section",
+  },
+  { key: "atelier", label: "From the Atelier", short: "atelier", kind: "section" },
+];
+
+const SITE_MEDIA_SHORT_TO_KEY = Object.fromEntries(
+  SITE_MEDIA_META.map((m) => [m.short, m.key])
+) as Record<string, SiteMediaKey>;
+
+export function siteMediaKeyFromShort(short: string): SiteMediaKey | null {
+  return SITE_MEDIA_SHORT_TO_KEY[short] || null;
+}
+
+export function siteMediaMeta(key: SiteMediaKey) {
+  return SITE_MEDIA_META.find((m) => m.key === key)!;
+}
+
+export function ensureSiteMedia(data: CatalogData): SiteMediaConfig {
+  if (!data.siteMedia || typeof data.siteMedia !== "object") {
+    data.siteMedia = {};
+  }
+  return data.siteMedia;
+}
+
+export function getSiteMediaSlot(
+  data: CatalogData,
+  key: SiteMediaKey
+): SiteMediaSlot {
+  const media = ensureSiteMedia(data);
+  return media[key] || {};
+}
+
+export function setSiteMediaSlot(
+  data: CatalogData,
+  key: SiteMediaKey,
+  patch: { image?: string; text?: string; clearImage?: boolean; clearText?: boolean }
+): { error?: string } {
+  if (!SITE_MEDIA_META.some((m) => m.key === key)) {
+    return { error: "Unknown site media slot" };
+  }
+  const media = ensureSiteMedia(data);
+  const cur = { ...(media[key] || {}) };
+  if (patch.clearText) delete cur.text;
+  else if (patch.text !== undefined) cur.text = patch.text.trim();
+  if (patch.clearImage) delete cur.image;
+  else if (patch.image !== undefined) cur.image = patch.image.trim();
+  if (!cur.image && !cur.text) {
+    delete media[key];
+  } else {
+    media[key] = cur;
+  }
+  return {};
+}
 
 export const DEFAULT_TOP_NAV: TopNavSlot[] = [
   { label: "Shop", type: "shop" },
@@ -553,6 +665,7 @@ export async function saveCatalog(
 ): Promise<{ ok: boolean; error?: string }> {
   ensureTopNav(data);
   ensureHomeSections(data);
+  ensureSiteMedia(data);
   pruneHomeSectionItems(data);
   const saved = await putGithubFile(
     CATALOG_PATH,

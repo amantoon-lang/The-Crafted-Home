@@ -60,7 +60,7 @@ curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
 
 ## 6. Use the bot
 
-Send **`/start`** or **`/menu`**. You get **4 global options** (reply keyboard + buttons):
+Send **`/start`** or **`/menu`**. You get **5 global options** (reply keyboard + buttons):
 
 | # | Menu | Actions |
 |---|------|---------|
@@ -68,8 +68,18 @@ Send **`/start`** or **`/menu`**. You get **4 global options** (reply keyboard +
 | 2 | **Categories** | Add / Remove / Set image / Tag product — then pick which product belongs in the category |
 | 3 | **Top Nav** | Add·Edit a slot / Remove a slot — attach Shop, Bestsellers, or a category |
 | 4 | **Homepage** | Add (show) / Remove (hide) / Edit section items — attach products to each section |
+| 5 | **Site Images** | Landing hero or section thumbnail — send **text** then **photo** (live on homepage) |
 
 Send `/cancel` to abort a guided step.
+
+### Site Images (menu 5️⃣)
+
+1. Open **Site Images**
+2. Tap **Landing / Hero** or a section (Collections, Featured, …)
+3. Send the **text** (headline / section title), or `-` to keep
+4. Send a **photo**, or `-` to keep the current image
+
+Landing updates the homepage hero. Section slots update that section’s title and optional banner thumbnail.
 
 ### Advanced / legacy commands
 

@@ -21,9 +21,16 @@ import {
   homeSectionKeyFromShort,
   homeSectionMeta,
   HOME_SECTION_META,
+  ensureSiteMedia,
+  getSiteMediaSlot,
+  setSiteMediaSlot,
+  siteMediaKeyFromShort,
+  siteMediaMeta,
+  SITE_MEDIA_META,
   type CatalogData,
   type TopNavSlot,
   type HomeSectionKey,
+  type SiteMediaKey,
 } from "@/data/catalog";
 import { formatCurrency } from "@/lib/utils";
 
@@ -44,13 +51,15 @@ type SessionFlow =
   | "prod_add"
   | "prod_edit"
   | "cat_add"
-  | "cat_img";
+  | "cat_img"
+  | "site_media";
 
 type SessionDraft = {
   flow: SessionFlow;
-  step: "name" | "price" | "photo";
+  step: "name" | "price" | "photo" | "text";
   productId?: string;
   categoryId?: string;
+  siteMediaKey?: SiteMediaKey;
   fields: Record<string, string>;
   updatedAt: number;
 };
@@ -285,12 +294,13 @@ function helpText() {
 
 Prices are in <b>INR (₹)</b>.
 
-Use the <b>4 menu buttons</b> below (or tap the options):
+Use the <b>5 menu buttons</b> below (or tap the options):
 
 1️⃣ <b>Products</b> — add / edit / delete (name, price, photo)
 2️⃣ <b>Categories</b> — add / remove / set image, then tag a product
 3️⃣ <b>Top Nav</b> — add / remove / edit the 4 header links
 4️⃣ <b>Homepage</b> — show / hide / edit sections + attach products
+5️⃣ <b>Site Images</b> — landing hero or section thumbnail (text + photo)
 
 Send /menu anytime to reopen this menu.
 Send /cancel to abort a guided step.`;
@@ -301,6 +311,7 @@ function mainMenuKeyboard(): ReplyKeyboard {
     keyboard: [
       [{ text: "Products" }, { text: "Categories" }],
       [{ text: "Top Nav" }, { text: "Homepage" }],
+      [{ text: "Site Images" }],
     ],
     resize_keyboard: true,
   };
@@ -317,6 +328,7 @@ function mainMenuInline() {
         { text: "3️⃣ Top Nav", callback_data: "menu:nav" },
         { text: "4️⃣ Homepage", callback_data: "menu:home" },
       ],
+      [{ text: "5️⃣ Site Images", callback_data: "menu:media" }],
     ],
   };
 }
@@ -382,6 +394,45 @@ function homepageHubText(data: CatalogData) {
     `<b>Homepage</b>\nAdd = show a section + attach products.\nRemove = hide a section.\nEdit = change which products are attached.\n\n` +
     listHomeSections(data)
   );
+}
+
+function siteImagesHubText(data: CatalogData) {
+  ensureSiteMedia(data);
+  const lines = SITE_MEDIA_META.map((m) => {
+    const slot = getSiteMediaSlot(data, m.key);
+    const bits = [
+      slot.image ? "🖼" : "·",
+      slot.text ? `“${truncateLabel(slot.text, 28)}”` : "no text",
+    ];
+    return `${bits[0]} <b>${m.label}</b> — ${bits[1]}`;
+  });
+  return (
+    `<b>Site Images</b>\nChange the <b>landing hero</b> or a <b>section thumbnail</b> (not product photos).\n` +
+    `Flow: pick a slot → send <b>text</b> → send <b>photo</b>.\n` +
+    `Use <code>-</code> to skip text or keep the current photo.\n\n` +
+    lines.join("\n")
+  );
+}
+
+function buildSiteImagesHubKeyboard(data: CatalogData) {
+  ensureSiteMedia(data);
+  const rows: InlineButton[][] = [
+    [{ text: "Landing / Hero", callback_data: "media:landing" }],
+  ];
+  for (const m of SITE_MEDIA_META.filter((x) => x.kind === "section")) {
+    const slot = getSiteMediaSlot(data, m.key);
+    rows.push([
+      {
+        text: truncateLabel(
+          `${slot.image ? "✓ " : ""}${m.label}`,
+          40
+        ),
+        callback_data: `media:${m.short}`,
+      },
+    ]);
+  }
+  rows.push([{ text: "« Main menu", callback_data: "menu:main" }]);
+  return { inline_keyboard: rows };
 }
 
 function buildHomepageHubKeyboard(data: CatalogData) {
@@ -1077,6 +1128,105 @@ async function handleSessionMessage(
     }
   }
 
+  // ——— Site images (landing / section thumbs) ———
+  if (draft.flow === "site_media" && draft.siteMediaKey) {
+    const meta = siteMediaMeta(draft.siteMediaKey);
+    if (draft.step === "text") {
+      if (!skip) {
+        if (!text || text.startsWith("/")) {
+          await sendMessage(
+            chatId,
+            "Send the <b>text</b> for this slot, or <code>-</code> to keep current."
+          );
+          return true;
+        }
+        draft.fields.text = text.trim();
+      } else {
+        draft.fields.skipText = "1";
+      }
+      draft.step = "photo";
+      setSession(chatId, draft);
+      await sendMessage(
+        chatId,
+        `<b>${meta.label}</b>\nStep 2/2 — send a <b>photo</b>.\n` +
+          `Or send <code>-</code> to keep the current image (text-only update).`
+      );
+      return true;
+    }
+    if (draft.step === "photo") {
+      let imageUrl: string | undefined;
+      if (skip) {
+        // keep image; maybe text-only
+      } else if (message.photo?.length) {
+        const largest = message.photo[message.photo.length - 1];
+        const hosted = await hostTelegramPhoto(
+          largest.file_id,
+          `site-${draft.siteMediaKey}`
+        );
+        if (hosted.error || !hosted.url) {
+          await sendMessage(
+            chatId,
+            `Could not host photo: ${hosted.error || "unknown error"}`
+          );
+          return true;
+        }
+        imageUrl = hosted.url;
+      } else {
+        await sendMessage(
+          chatId,
+          "Send a <b>photo</b>, or <code>-</code> to keep the current image."
+        );
+        return true;
+      }
+
+      const catalog = await loadCatalog();
+      const patch: {
+        image?: string;
+        text?: string;
+      } = {};
+      if (draft.fields.skipText !== "1" && draft.fields.text !== undefined) {
+        patch.text = draft.fields.text;
+      }
+      if (imageUrl) patch.image = imageUrl;
+
+      if (!patch.image && draft.fields.skipText === "1") {
+        clearSession(chatId);
+        await sendMessage(
+          chatId,
+          "Nothing changed. Pick a slot again if you need an update.",
+          buildSiteImagesHubKeyboard(catalog)
+        );
+        return true;
+      }
+
+      const applied = setSiteMediaSlot(catalog, draft.siteMediaKey, patch);
+      if (applied.error) {
+        clearSession(chatId);
+        await sendMessage(chatId, applied.error);
+        return true;
+      }
+      const saved = await saveCatalog(
+        catalog,
+        `telegram: site media ${draft.siteMediaKey} by ${actor}`
+      );
+      clearSession(chatId);
+      if (!saved.ok) {
+        await sendMessage(chatId, `Failed to save: ${saved.error}`);
+        return true;
+      }
+      const slot = getSiteMediaSlot(catalog, draft.siteMediaKey);
+      await sendMessage(
+        chatId,
+        `Updated <b>${meta.label}</b>\n` +
+          (slot.text ? `Text: <i>${slot.text}</i>\n` : "") +
+          (slot.image ? `Image: saved ✓\n` : "") +
+          `\nLive on the homepage after the next deploy refresh.`,
+        buildSiteImagesHubKeyboard(catalog)
+      );
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -1375,6 +1525,54 @@ export async function POST(req: Request) {
           messageId,
           homepageHubText(catalog),
           buildHomepageHubKeyboard(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "menu:media") {
+        clearSession(chatId);
+        const catalog = await loadCatalog();
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          siteImagesHubText(catalog),
+          buildSiteImagesHubKeyboard(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("media:")) {
+        const short = data.slice("media:".length);
+        const key = siteMediaKeyFromShort(short);
+        if (!key) {
+          await answerCallback(cb.id, "Unknown");
+          return NextResponse.json({ ok: true });
+        }
+        const meta = siteMediaMeta(key);
+        const catalog = await loadCatalog();
+        const slot = getSiteMediaSlot(catalog, key);
+        setSession(chatId, {
+          flow: "site_media",
+          step: "text",
+          siteMediaKey: key,
+          fields: {},
+          updatedAt: Date.now(),
+        });
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `<b>${meta.label}</b>\n` +
+            (slot.text ? `Current text: <i>${slot.text}</i>\n` : "") +
+            (slot.image ? `Current image: set ✓\n` : "") +
+            `\nStep 1/2 — send the <b>text</b> (headline / title).\n` +
+            `Send <code>-</code> to keep current text.\n\n/cancel to abort.`,
+          {
+            inline_keyboard: [
+              [{ text: "Cancel", callback_data: "sess:cancel" }],
+            ],
+          }
         );
         return NextResponse.json({ ok: true });
       }
@@ -2193,6 +2391,16 @@ export async function POST(req: Request) {
         chatId,
         homepageHubText(catalog),
         buildHomepageHubKeyboard(catalog)
+      );
+      return NextResponse.json({ ok: true });
+    }
+    if (menuLabel === "Site Images") {
+      clearSession(chatId);
+      const catalog = await loadCatalog();
+      await sendMessage(
+        chatId,
+        siteImagesHubText(catalog),
+        buildSiteImagesHubKeyboard(catalog)
       );
       return NextResponse.json({ ok: true });
     }
