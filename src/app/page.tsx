@@ -8,58 +8,144 @@ import { Quote, Leaf, HandHeart, Truck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+/** Scene photos matched to craft materials — used when a category still has a generic stock image. */
+const CATEGORY_SCENES: Record<string, string> = {
+  decor:
+    "https://images.unsplash.com/photo-1615874959474-d609969a20ed?w=800&q=80",
+  "home-decor":
+    "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&q=80",
+  "home-furnishing":
+    "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80",
+  jewellery:
+    "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&q=80",
+  jewelry:
+    "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&q=80",
+  "wooden-decor":
+    "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&q=80",
+  ceramics:
+    "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=800&q=80",
+  candles:
+    "https://images.unsplash.com/photo-1478144592103-25e218a04891?w=800&q=80",
+  textiles:
+    "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=800&q=80",
+  macrame:
+    "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=800&q=80",
+};
+
+const GENERIC_STOCK = [
+  "photo-1616486338812-3dadae4b4ace", // repeated wood living-room stock
+];
+
+function isGenericStock(url: string) {
+  return GENERIC_STOCK.some((id) => url.includes(id));
+}
+
+function categoryDisplayImage(category: {
+  slug: string;
+  image: string;
+  name: string;
+}) {
+  if (category.image && !isGenericStock(category.image)) {
+    return category.image;
+  }
+  return CATEGORY_SCENES[category.slug] || category.image;
+}
+
 const testimonials = [
   {
     quote:
-      "Every piece feels considered. The ceramic vase set is the first thing guests notice.",
-    name: "Jordan Ellis",
-    place: "Austin, TX",
+      "The pooja thali feels like it was made for our home — warm wood, careful carving, and it arrived beautifully packed.",
+    name: "Ananya Mehta",
+    place: "Bhopal",
   },
   {
     quote:
-      "Finally a marketplace that respects craftsmanship. Shipping was careful and packaging beautiful.",
-    name: "Sam Rivera",
-    place: "Seattle, WA",
+      "Finally a marketplace that respects Indian craftsmanship. Our guests always ask where the holy cow piece is from.",
+    name: "Rohit Sharma",
+    place: "Indore",
   },
   {
     quote:
-      "The oak serving board is now part of every dinner we host. Worth every penny.",
-    name: "Casey Morgan",
-    place: "Chicago, IL",
+      "Quiet, handmade décor with real presence. Shipping was careful and every piece tells a story.",
+    name: "Priya Nair",
+    place: "Bengaluru",
   },
-];
-
-const instagramImages = [
-  "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=600&q=80",
-  "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=600&q=80",
-  "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=600&q=80",
-  "https://images.unsplash.com/photo-1603006905004-abd84d2429d2?w=600&q=80",
-  "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=600&q=80",
-  "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=600&q=80",
 ];
 
 export default async function HomePage() {
   const catalog = await loadCatalog();
   const categories = catalog.categories;
-  const featured = catalog.products.filter((p) => p.featured).slice(0, 4);
-  const trending = catalog.products.filter((p) => p.trending).slice(0, 4);
-  const bestsellers = catalog.products.filter((p) => p.bestSeller).slice(0, 4);
+  const latest = [...catalog.products].sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const featured = (
+    catalog.products.filter((p) => p.featured).length
+      ? catalog.products.filter((p) => p.featured)
+      : latest
+  ).slice(0, 4);
+
+  const trending = (
+    catalog.products.filter((p) => p.trending).length
+      ? catalog.products.filter((p) => p.trending)
+      : latest
+  ).slice(0, 4);
+
+  const bestsellers = (
+    catalog.products.filter((p) => p.bestSeller).length
+      ? catalog.products.filter((p) => p.bestSeller)
+      : latest
+  ).slice(0, 4);
 
   const artisans = [
     ...new Map(
       catalog.products.slice(0, 8).map((p) => [
         p.artisan,
-        { name: p.artisan, image: p.images[0], category: p.category?.name || "" },
+        {
+          name: p.artisan,
+          image: p.images[0],
+          category: p.category?.name || "",
+        },
       ])
     ).values(),
   ].slice(0, 4);
+
+  // Hero: real catalog craft photo when available
+  const heroImage =
+    latest.find((p) => p.images?.[0])?.images[0] ||
+    "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=2000&q=80";
+  const heroAlt =
+    latest[0]?.title ||
+    "Handmade ceramics and craft pieces for the home";
+
+  // Atelier strip: actual product photos, then category scenes
+  const atelierImages = [
+    ...latest.flatMap((p) => p.images.slice(0, 2)),
+    ...categories.map((c) => categoryDisplayImage(c)),
+  ]
+    .filter(Boolean)
+    .filter((url, i, arr) => arr.indexOf(url) === i)
+    .slice(0, 6);
+
+  while (atelierImages.length < 6) {
+    atelierImages.push(
+      CATEGORY_SCENES.ceramics,
+      CATEGORY_SCENES.candles,
+      CATEGORY_SCENES["wooden-decor"],
+      CATEGORY_SCENES.textiles,
+      CATEGORY_SCENES.jewellery,
+      CATEGORY_SCENES["home-decor"]
+    );
+  }
+  const atelier = atelierImages.slice(0, 6);
 
   return (
     <div>
       <section className="relative min-h-[92vh] w-full overflow-hidden">
         <Image
-          src="https://images.unsplash.com/photo-1618220179428-22790b461013?w=2000&q=80"
-          alt="Sunlit handmade living room with ceramic and wood accents"
+          src={heroImage}
+          alt={heroAlt}
           fill
           priority
           className="object-cover"
@@ -79,8 +165,8 @@ export default async function HomePage() {
           </FadeIn>
           <FadeIn delay={0.22}>
             <p className="mt-4 max-w-lg text-sm leading-relaxed text-white/75 sm:text-base">
-              Discover one-of-a-kind pieces from independent artisans — ceramics,
-              textiles, woodwork, and quiet luxuries for everyday living.
+              Made in India · Born in Bhopal — ceramics, wood, textiles, and
+              ritual pieces from independent artisans for everyday living.
             </p>
           </FadeIn>
           <FadeIn delay={0.32}>
@@ -118,8 +204,8 @@ export default async function HomePage() {
                 className="image-zoom group relative block aspect-[4/5] overflow-hidden rounded-2xl"
               >
                 <Image
-                  src={category.image}
-                  alt={category.name}
+                  src={categoryDisplayImage(category)}
+                  alt={`${category.name} — handmade collection`}
                   fill
                   className="object-cover"
                   sizes="(max-width:768px) 50vw, 25vw"
@@ -139,7 +225,9 @@ export default async function HomePage() {
           <div className="mb-10 flex items-end justify-between gap-4">
             <div>
               <h2 className="font-display text-3xl sm:text-4xl">Featured Pieces</h2>
-              <p className="mt-3 text-muted-foreground">Editor picks with lasting presence.</p>
+              <p className="mt-3 text-muted-foreground">
+                Fresh from the workshop — pieces with lasting presence.
+              </p>
             </div>
             <Button asChild variant="outline">
               <Link href="/shop">View all</Link>
@@ -185,7 +273,7 @@ export default async function HomePage() {
                 <div className="image-zoom relative aspect-square">
                   <Image
                     src={artisan.image}
-                    alt={artisan.name}
+                    alt={`${artisan.name} — ${artisan.category || "handmade"}`}
                     fill
                     className="object-cover"
                     sizes="25vw"
@@ -214,7 +302,7 @@ export default async function HomePage() {
               {
                 icon: HandHeart,
                 title: "Support artisans",
-                text: "Your purchase goes directly to independent makers and small studios.",
+                text: "Your purchase goes directly to independent makers and small studios across India.",
               },
               {
                 icon: Leaf,
@@ -265,16 +353,18 @@ export default async function HomePage() {
           <div className="mb-8 flex items-end justify-between">
             <div>
               <h2 className="font-display text-3xl sm:text-4xl">From the Atelier</h2>
-              <p className="mt-2 text-sm text-muted-foreground">@thecraftedhome</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Real pieces from The Crafted Home catalog
+              </p>
             </div>
           </div>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-          {instagramImages.map((src, i) => (
-            <div key={src} className="image-zoom relative aspect-square">
+          {atelier.map((src, i) => (
+            <div key={`${src}-${i}`} className="image-zoom relative aspect-square">
               <Image
                 src={src}
-                alt={`Gallery image ${i + 1}`}
+                alt={`Handmade piece from The Crafted Home ${i + 1}`}
                 fill
                 className="object-cover"
                 sizes="16vw"
