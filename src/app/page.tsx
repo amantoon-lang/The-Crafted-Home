@@ -140,15 +140,16 @@ export default async function HomePage() {
     }
   }
 
-  const heroProduct = sections.hero.visible
-    ? resolveHomeProducts(catalog, "hero", latest, 1)[0]
-    : undefined;
-  const heroImage =
-    heroProduct?.images?.[0] ||
-    "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=2000&q=80";
+  /** Brand hero — Lippan craft flat-lay. Overrides latest-product default. */
+  const BRAND_HERO = "/home/lippan-craft-hero.jpg";
+  const heroCurated =
+    sections.hero.visible && sections.hero.itemIds.length > 0
+      ? resolveHomeProducts(catalog, "hero", [], 1)[0]
+      : undefined;
+  const heroImage = heroCurated?.images?.[0] || BRAND_HERO;
   const heroAlt =
-    heroProduct?.title ||
-    "Handmade ceramics and craft pieces for the home";
+    heroCurated?.title ||
+    "Handmade Lippan art décor on velvet — The Crafted Home, Bhopal";
 
   const atelierProducts = resolveHomeProducts(
     catalog,
