@@ -195,35 +195,6 @@
       },
       "createdAt": "2026-05-20T00:00:00.000Z",
       "reviews": []
-    },
-    {
-      "id": "prod-vases",
-      "title": "Speckled Stoneware Vase Set",
-      "slug": "speckled-stoneware-vase-set",
-      "description": "A trio of wheel-thrown vases with a soft speckled glaze — lovely alone or clustered on a console.",
-      "story": "Thrown on a kick wheel and glazed with a signature ash blend.",
-      "price": 9499,
-      "discount": 15,
-      "images": [
-        "https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?w=1200&q=80",
-        "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=1200&q=80"
-      ],
-      "stock": 18,
-      "artisan": "Jonah Hale",
-      "materials": "Stoneware clay, ash glaze",
-      "dimensions": "5–9 in height (set of 3)",
-      "rating": 4.7,
-      "reviewCount": 31,
-      "featured": true,
-      "trending": false,
-      "bestSeller": true,
-      "categoryId": "cat-ceramics",
-      "category": {
-        "name": "Ceramics",
-        "slug": "ceramics"
-      },
-      "createdAt": "2026-05-10T00:00:00.000Z",
-      "reviews": []
     }
   ]
 }
