@@ -60,7 +60,20 @@ curl "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
 
 ## 6. Use the bot
 
-Message your bot:
+Send **`/start`** or **`/menu`**. You get **4 global options** (reply keyboard + buttons):
+
+| # | Menu | Actions |
+|---|------|---------|
+| 1 | **Products** | Add / Edit / Delete — each asks for **name → price → photo** |
+| 2 | **Categories** | Add / Remove / Set image / Tag product — then pick which product belongs in the category |
+| 3 | **Top Nav** | Add·Edit a slot / Remove a slot — attach Shop, Bestsellers, or a category |
+| 4 | **Homepage** | Add (show) / Remove (hide) / Edit section items — attach products to each section |
+
+Send `/cancel` to abort a guided step.
+
+### Advanced / legacy commands
+
+Still work if you prefer typing them:
 
 | Command | Example |
 |---------|---------|
@@ -77,36 +90,26 @@ Message your bot:
 | `/delvideo slug` | remove video |
 | `/remove` or `/delete` | tappable list of products to delete |
 | `/remove &lt;slug or title&gt;` | confirm delete for that listing |
-| `/categories` | list categories |
-| `/addcategory` | add a category |
-| `/setcategory &lt;slug&gt;` | rename or change category image |
-| `/rmcategory` | remove an empty category |
-| `/categories` | list + add / edit / remove categories |
-| `/nav` | edit the 4 top header links |
-| `/setnav 3 home-decor` | set a top link by text |
-| `/home` | show/hide homepage sections + pick items |
+| `/categories` | open Categories menu |
+| `/nav` | open Top Nav menu |
+| `/home` | open Homepage menu |
 | `/add` | multi-line add (see below) |
 
-### Homepage sections (`/home`)
+### Homepage sections (`/home` or Homepage menu)
 
-Send **`/home`**. You get every homepage block (Hero, Collections, Featured, Trending, Bestsellers, Artisans, Why Handmade, Stories, Atelier).
-
-1. Tap a section  
-2. Tap **Show** or **Hide**  
-3. If you choose **Show** (and the section has items), tap products or categories to curate what appears  
-4. Tap **Done** — empty selection = automatic defaults on the site  
+1. Tap **Add section** (show) / **Remove section** (hide) / **Edit section items**
+2. Or tap a section name → Show / Hide / Pick items
+3. Empty product picks = automatic defaults on the site
 
 **Why Buy Handmade** and **Stories from Home** are show/hide only (fixed copy).
 
-### Top header links (`/nav`)
+### Top header links (`/nav` or Top Nav menu)
 
-Send **`/nav`**. You get the four current links as buttons (e.g. `1. Shop`, `3. Home furnishing`).
+1. Tap **Add / Edit slot** → pick one of the 4 links
+2. Tap **Shop**, **Bestsellers**, or a collection
+3. Or tap **Remove slot** to reset a link back to Shop
 
-1. Tap the link you want to change  
-2. Tap **Shop**, **Bestsellers**, or a collection  
-3. The list refreshes — tap another link to keep editing  
-
-Categories are managed separately with **`/categories`** (Add / Edit / Remove).
+Categories are also managed from the **Categories** menu.
 
 ### Product photos & video
 
