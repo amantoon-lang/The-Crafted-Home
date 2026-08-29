@@ -45,6 +45,34 @@
   ],
   "products": [
     {
+      "id": "prod-mtedxugf",
+      "title": "Blue Ceramic Vase",
+      "slug": "blue-ceramic-vase",
+      "description": "Handmade vase",
+      "story": "",
+      "price": 2499,
+      "discount": 0,
+      "images": [
+        "https://api.telegram.org/file/bot8766107566:AAGsZPD1eF7-wdC6xMdWOFEl-4Pglemwfo0/photos/file_0.jpg"
+      ],
+      "stock": 12,
+      "artisan": "Priya",
+      "materials": "Handmade",
+      "dimensions": "",
+      "rating": 5,
+      "reviewCount": 0,
+      "featured": false,
+      "trending": false,
+      "bestSeller": false,
+      "categoryId": "cat-ceramics",
+      "category": {
+        "name": "Ceramics",
+        "slug": "ceramics"
+      },
+      "createdAt": "2026-08-29T12:57:18.447Z",
+      "reviews": []
+    },
+    {
       "id": "prod-oak-board",
       "title": "Hand-Carved Oak Serving Board",
       "slug": "hand-carved-oak-serving-board",
@@ -66,7 +94,10 @@
       "trending": true,
       "bestSeller": true,
       "categoryId": "cat-wooden",
-      "category": { "name": "Wooden Decor", "slug": "wooden-decor" },
+      "category": {
+        "name": "Wooden Decor",
+        "slug": "wooden-decor"
+      },
       "createdAt": "2026-06-01T00:00:00.000Z",
       "reviews": [
         {
@@ -74,7 +105,9 @@
           "rating": 5,
           "comment": "Beautiful grain and substantial feel — our go-to cheese board.",
           "createdAt": "2026-07-01T00:00:00.000Z",
-          "user": { "name": "Avery Lane" }
+          "user": {
+            "name": "Avery Lane"
+          }
         }
       ]
     },
@@ -100,7 +133,10 @@
       "trending": true,
       "bestSeller": false,
       "categoryId": "cat-macrame",
-      "category": { "name": "Macrame", "slug": "macrame" },
+      "category": {
+        "name": "Macrame",
+        "slug": "macrame"
+      },
       "createdAt": "2026-05-20T00:00:00.000Z",
       "reviews": []
     },
@@ -126,7 +162,10 @@
       "trending": false,
       "bestSeller": true,
       "categoryId": "cat-ceramics",
-      "category": { "name": "Ceramics", "slug": "ceramics" },
+      "category": {
+        "name": "Ceramics",
+        "slug": "ceramics"
+      },
       "createdAt": "2026-05-10T00:00:00.000Z",
       "reviews": []
     },
@@ -152,7 +191,10 @@
       "trending": true,
       "bestSeller": false,
       "categoryId": "cat-wall",
-      "category": { "name": "Wall Art", "slug": "wall-art" },
+      "category": {
+        "name": "Wall Art",
+        "slug": "wall-art"
+      },
       "createdAt": "2026-04-28T00:00:00.000Z",
       "reviews": []
     },
@@ -178,7 +220,10 @@
       "trending": true,
       "bestSeller": true,
       "categoryId": "cat-candles",
-      "category": { "name": "Candles", "slug": "candles" },
+      "category": {
+        "name": "Candles",
+        "slug": "candles"
+      },
       "createdAt": "2026-04-15T00:00:00.000Z",
       "reviews": []
     },
@@ -204,7 +249,10 @@
       "trending": true,
       "bestSeller": false,
       "categoryId": "cat-planters",
-      "category": { "name": "Planters", "slug": "planters" },
+      "category": {
+        "name": "Planters",
+        "slug": "planters"
+      },
       "createdAt": "2026-04-01T00:00:00.000Z",
       "reviews": []
     },
@@ -230,7 +278,10 @@
       "trending": false,
       "bestSeller": true,
       "categoryId": "cat-kitchen",
-      "category": { "name": "Kitchen Decor", "slug": "kitchen-decor" },
+      "category": {
+        "name": "Kitchen Decor",
+        "slug": "kitchen-decor"
+      },
       "createdAt": "2026-03-22T00:00:00.000Z",
       "reviews": []
     },
@@ -256,7 +307,10 @@
       "trending": false,
       "bestSeller": true,
       "categoryId": "cat-wooden",
-      "category": { "name": "Wooden Decor", "slug": "wooden-decor" },
+      "category": {
+        "name": "Wooden Decor",
+        "slug": "wooden-decor"
+      },
       "createdAt": "2026-03-10T00:00:00.000Z",
       "reviews": []
     },
@@ -282,7 +336,10 @@
       "trending": true,
       "bestSeller": true,
       "categoryId": "cat-ceramics",
-      "category": { "name": "Ceramics", "slug": "ceramics" },
+      "category": {
+        "name": "Ceramics",
+        "slug": "ceramics"
+      },
       "createdAt": "2026-03-01T00:00:00.000Z",
       "reviews": []
     },
@@ -308,7 +365,10 @@
       "trending": false,
       "bestSeller": false,
       "categoryId": "cat-wall",
-      "category": { "name": "Wall Art", "slug": "wall-art" },
+      "category": {
+        "name": "Wall Art",
+        "slug": "wall-art"
+      },
       "createdAt": "2026-02-18T00:00:00.000Z",
       "reviews": []
     },
@@ -334,7 +394,10 @@
       "trending": true,
       "bestSeller": true,
       "categoryId": "cat-candles",
-      "category": { "name": "Candles", "slug": "candles" },
+      "category": {
+        "name": "Candles",
+        "slug": "candles"
+      },
       "createdAt": "2026-02-05T00:00:00.000Z",
       "reviews": []
     },
@@ -360,7 +423,10 @@
       "trending": false,
       "bestSeller": false,
       "categoryId": "cat-macrame",
-      "category": { "name": "Macrame", "slug": "macrame" },
+      "category": {
+        "name": "Macrame",
+        "slug": "macrame"
+      },
       "createdAt": "2026-01-28T00:00:00.000Z",
       "reviews": []
     }
