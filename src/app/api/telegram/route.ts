@@ -13,8 +13,16 @@ import {
   ensureTopNav,
   setTopNavSlot,
   clearTopNavCategory,
+  ensureHomeSections,
+  setHomeSectionVisible,
+  toggleHomeSectionItem,
+  setHomeSectionItems,
+  homeSectionKeyFromShort,
+  homeSectionMeta,
+  HOME_SECTION_META,
   type CatalogData,
   type TopNavSlot,
+  type HomeSectionKey,
 } from "@/data/catalog";
 import { formatCurrency } from "@/lib/utils";
 
@@ -254,6 +262,9 @@ Prices are in <b>INR (₹)</b>.
 <b>Top header</b>
 /nav — edit the 4 top links (Shop, Bestsellers, collections)
 
+<b>Homepage</b>
+/home — show/hide sections + pick which items appear
+
 Each product can have <b>up to ${MAX_PRODUCT_IMAGES} photos</b> and <b>1 video</b>.`;
 }
 
@@ -338,6 +349,134 @@ function buildNavTypePicker(slotIndex: number, catalog: CatalogData) {
     ]);
   }
   rows.push([{ text: "« Back", callback_data: "navrefresh" }]);
+  return { inline_keyboard: rows };
+}
+
+function describeHomeSection(data: CatalogData, key: HomeSectionKey) {
+  const meta = homeSectionMeta(key);
+  const section = ensureHomeSections(data)[key];
+  const on = section.visible ? "ON" : "OFF";
+  let items = "";
+  if (meta.itemKind === "none") {
+    items = " (fixed copy)";
+  } else if (!section.itemIds.length) {
+    items = " · auto";
+  } else if (meta.itemKind === "category") {
+    const names = section.itemIds
+      .map((id) => data.categories.find((c) => c.id === id)?.name || id)
+      .slice(0, 4);
+    items = ` · ${names.join(", ")}${section.itemIds.length > 4 ? "…" : ""}`;
+  } else {
+    const names = section.itemIds
+      .map((id) => data.products.find((p) => p.id === id)?.title || id)
+      .slice(0, 3);
+    items = ` · ${names.join(", ")}${section.itemIds.length > 3 ? "…" : ""}`;
+  }
+  return `${section.visible ? "✓" : "·"} <b>${meta.label}</b> [${on}]${items}`;
+}
+
+function listHomeSections(data: CatalogData) {
+  ensureHomeSections(data);
+  return (
+    `<b>Homepage sections</b>\n` +
+    `1) Tap a section → Show or Hide\n` +
+    `2) If Show → pick which items appear\n\n` +
+    HOME_SECTION_META.map((m) => describeHomeSection(data, m.key)).join("\n")
+  );
+}
+
+function buildHomeHubKeyboard(data: CatalogData) {
+  const sections = ensureHomeSections(data);
+  const rows: InlineButton[][] = [];
+  for (const meta of HOME_SECTION_META) {
+    const on = sections[meta.key].visible;
+    rows.push([
+      {
+        text: truncateLabel(
+          `${on ? "✓" : "○"} ${meta.label}${
+            meta.itemKind !== "none" && sections[meta.key].itemIds.length
+              ? ` (${sections[meta.key].itemIds.length})`
+              : ""
+          }`,
+          40
+        ),
+        callback_data: `homesec:${meta.short}`,
+      },
+    ]);
+  }
+  rows.push([{ text: "Refresh", callback_data: "homehub" }]);
+  return { inline_keyboard: rows };
+}
+
+function buildHomeVisibilityKeyboard(short: string) {
+  return {
+    inline_keyboard: [
+      [
+        { text: "Show", callback_data: `homevis:${short}:1` },
+        { text: "Hide", callback_data: `homevis:${short}:0` },
+      ],
+      [{ text: "« Back", callback_data: "homehub" }],
+    ],
+  };
+}
+
+function homeItemsIntro(data: CatalogData, key: HomeSectionKey) {
+  const meta = homeSectionMeta(key);
+  const section = ensureHomeSections(data)[key];
+  const count = section.itemIds.length;
+  const kind =
+    meta.itemKind === "category"
+      ? "categories"
+      : meta.maxItems === 1
+        ? "product photo"
+        : "products";
+  return (
+    `<b>${meta.label}</b> is visible.\n` +
+    (count
+      ? `Selected: <b>${count}</b> ${kind}. Tap to toggle.\n`
+      : `No picks yet → homepage uses <b>auto</b> defaults.\nTap items to curate.\n`) +
+    (meta.maxItems === 1 ? "(Pick one product for the hero.)\n" : "") +
+    `\nWhen finished, tap <b>Done</b>.`
+  );
+}
+
+function buildHomeItemsKeyboard(data: CatalogData, key: HomeSectionKey) {
+  const meta = homeSectionMeta(key);
+  const section = ensureHomeSections(data)[key];
+  const selected = new Set(section.itemIds);
+  const rows: InlineButton[][] = [];
+
+  if (meta.itemKind === "category") {
+    for (const c of data.categories.slice(0, 24)) {
+      rows.push([
+        {
+          text: truncateLabel(
+            `${selected.has(c.id) ? "✓ " : ""}${c.name}`,
+            40
+          ),
+          callback_data: `hometog:${meta.short}:${c.id}`,
+        },
+      ]);
+    }
+  } else if (meta.itemKind === "product") {
+    for (const p of data.products.slice(0, 28)) {
+      rows.push([
+        {
+          text: truncateLabel(
+            `${selected.has(p.id) ? "✓ " : ""}${p.title}`,
+            40
+          ),
+          callback_data: `hometog:${meta.short}:${p.id}`,
+        },
+      ]);
+    }
+  }
+
+  rows.push([
+    { text: "Clear (auto)", callback_data: `homeclear:${meta.short}` },
+    { text: "Done", callback_data: "homehub" },
+  ]);
+  rows.push([{ text: "« Back", callback_data: `homesec:${meta.short}` }]);
   return { inline_keyboard: rows };
 }
 
@@ -686,6 +825,207 @@ export async function POST(req: Request) {
           messageId,
           listTopNav(catalog),
           buildNavHubKeyboard(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "homehub") {
+        const catalog = await loadCatalog();
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          listHomeSections(catalog),
+          buildHomeHubKeyboard(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("homesec:")) {
+        const short = data.slice("homesec:".length);
+        const key = homeSectionKeyFromShort(short);
+        if (!key) {
+          await answerCallback(cb.id, "Unknown");
+          return NextResponse.json({ ok: true });
+        }
+        const catalog = await loadCatalog();
+        const meta = homeSectionMeta(key);
+        const section = ensureHomeSections(catalog)[key];
+        await answerCallback(cb.id);
+        const status = section.visible ? "currently <b>shown</b>" : "currently <b>hidden</b>";
+        const pickHint =
+          meta.itemKind === "none"
+            ? ""
+            : `\n\nAfter you tap <b>Show</b>, you'll pick which ${
+                meta.itemKind === "category" ? "categories" : "products"
+              } appear.`;
+        const extra =
+          section.visible && meta.itemKind !== "none"
+            ? {
+                inline_keyboard: [
+                  [
+                    { text: "Show", callback_data: `homevis:${short}:1` },
+                    { text: "Hide", callback_data: `homevis:${short}:0` },
+                  ],
+                  [
+                    {
+                      text: "Pick items…",
+                      callback_data: `homeitems:${short}`,
+                    },
+                  ],
+                  [{ text: "« Back", callback_data: "homehub" }],
+                ],
+              }
+            : buildHomeVisibilityKeyboard(short);
+        await editMessage(
+          chatId,
+          messageId,
+          `<b>${meta.label}</b> is ${status}.${pickHint}\n\nShow or hide this section?`,
+          extra
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("homevis:")) {
+        const parts = data.split(":");
+        const short = parts[1];
+        const visible = parts[2] === "1";
+        const key = homeSectionKeyFromShort(short);
+        if (!key) {
+          await answerCallback(cb.id, "Unknown");
+          return NextResponse.json({ ok: true });
+        }
+        const catalog = await loadCatalog();
+        setHomeSectionVisible(catalog, key, visible);
+        const saved = await saveCatalog(
+          catalog,
+          `telegram: home ${short} ${visible ? "show" : "hide"} by ${cb.from?.username || fromId}`
+        );
+        if (!saved.ok) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, `Failed to save: ${saved.error}`);
+          return NextResponse.json({ ok: true });
+        }
+        const meta = homeSectionMeta(key);
+        if (visible && meta.itemKind !== "none") {
+          await answerCallback(cb.id, "Shown");
+          await editMessage(
+            chatId,
+            messageId,
+            homeItemsIntro(catalog, key),
+            buildHomeItemsKeyboard(catalog, key)
+          );
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id, visible ? "Shown" : "Hidden");
+        await editMessage(
+          chatId,
+          messageId,
+          listHomeSections(catalog),
+          buildHomeHubKeyboard(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("homeitems:")) {
+        const short = data.slice("homeitems:".length);
+        const key = homeSectionKeyFromShort(short);
+        if (!key) {
+          await answerCallback(cb.id, "Unknown");
+          return NextResponse.json({ ok: true });
+        }
+        const meta = homeSectionMeta(key);
+        if (meta.itemKind === "none") {
+          await answerCallback(cb.id, "N/A");
+          return NextResponse.json({ ok: true });
+        }
+        const catalog = await loadCatalog();
+        setHomeSectionVisible(catalog, key, true);
+        const saved = await saveCatalog(
+          catalog,
+          `telegram: home ${short} pick items by ${cb.from?.username || fromId}`
+        );
+        if (!saved.ok) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, `Failed to save: ${saved.error}`);
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          homeItemsIntro(catalog, key),
+          buildHomeItemsKeyboard(catalog, key)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("hometog:")) {
+        const parts = data.split(":");
+        const short = parts[1];
+        const itemId = parts.slice(2).join(":");
+        const key = homeSectionKeyFromShort(short);
+        if (!key || !itemId) {
+          await answerCallback(cb.id, "Unknown");
+          return NextResponse.json({ ok: true });
+        }
+        const catalog = await loadCatalog();
+        const toggled = toggleHomeSectionItem(catalog, key, itemId);
+        if (toggled.error) {
+          await answerCallback(cb.id, toggled.error.slice(0, 48));
+          return NextResponse.json({ ok: true });
+        }
+        const saved = await saveCatalog(
+          catalog,
+          `telegram: home ${short} toggle item by ${cb.from?.username || fromId}`
+        );
+        if (!saved.ok) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, `Failed to save: ${saved.error}`);
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(
+          cb.id,
+          toggled.selected ? "Added" : "Removed"
+        );
+        await editMessage(
+          chatId,
+          messageId,
+          homeItemsIntro(catalog, key),
+          buildHomeItemsKeyboard(catalog, key)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("homeclear:")) {
+        const short = data.slice("homeclear:".length);
+        const key = homeSectionKeyFromShort(short);
+        if (!key) {
+          await answerCallback(cb.id, "Unknown");
+          return NextResponse.json({ ok: true });
+        }
+        const catalog = await loadCatalog();
+        const cleared = setHomeSectionItems(catalog, key, []);
+        if (cleared.error) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, cleared.error);
+          return NextResponse.json({ ok: true });
+        }
+        const saved = await saveCatalog(
+          catalog,
+          `telegram: home ${short} clear items by ${cb.from?.username || fromId}`
+        );
+        if (!saved.ok) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, `Failed to save: ${saved.error}`);
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id, "Cleared");
+        await editMessage(
+          chatId,
+          messageId,
+          homeItemsIntro(catalog, key),
+          buildHomeItemsKeyboard(catalog, key)
         );
         return NextResponse.json({ ok: true });
       }
@@ -1129,6 +1469,15 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
         chatId,
         listTopNav(catalog),
         buildNavHubKeyboard(catalog)
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    if (cmd === "/home" || cmd === "/homepage" || cmd === "/sections") {
+      await sendMessage(
+        chatId,
+        listHomeSections(catalog),
+        buildHomeHubKeyboard(catalog)
       );
       return NextResponse.json({ ok: true });
     }
