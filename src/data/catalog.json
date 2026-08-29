@@ -115,9 +115,9 @@
       "type": "bestsellers"
     },
     {
-      "label": "Ceramics",
       "type": "category",
-      "categorySlug": "ceramics"
+      "categorySlug": "home-furnishing",
+      "label": "Home furnishing"
     },
     {
       "label": "Wood",
