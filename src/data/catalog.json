@@ -398,35 +398,6 @@
       },
       "createdAt": "2026-03-01T00:00:00.000Z",
       "reviews": []
-    },
-    {
-      "id": "prod-mirror",
-      "title": "Woven Rattan Mirror",
-      "slug": "woven-rattan-mirror",
-      "description": "A circular mirror framed in handwoven rattan — organic texture for entryways and dressing nooks.",
-      "story": "Each frame takes a full day of careful weaving.",
-      "price": 13999,
-      "discount": 8,
-      "images": [
-        "https://images.unsplash.com/photo-1618220179428-22790b461013?w=1200&q=80",
-        "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=1200&q=80"
-      ],
-      "stock": 10,
-      "artisan": "Bali Weave Atelier",
-      "materials": "Natural rattan, glass mirror",
-      "dimensions": "28 in diameter",
-      "rating": 4.6,
-      "reviewCount": 15,
-      "featured": true,
-      "trending": false,
-      "bestSeller": false,
-      "categoryId": "cat-wall",
-      "category": {
-        "name": "Wall Art",
-        "slug": "wall-art"
-      },
-      "createdAt": "2026-02-18T00:00:00.000Z",
-      "reviews": []
     }
   ]
 }
