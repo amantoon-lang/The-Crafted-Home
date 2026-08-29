@@ -29,6 +29,8 @@ TELEGRAM_BOT_TOKEN=123456:ABC...
 TELEGRAM_ADMIN_IDS=900108032,-1001234567890
 # Optional: extra group chat ids (comma-separated)
 TELEGRAM_ALLOWED_CHAT_IDS=
+# Optional: extra chats that only receive checkout order alerts
+TELEGRAM_ORDER_CHAT_IDS=
 GITHUB_TOKEN=ghp_...
 GITHUB_REPO=amantoon-lang/The-Crafted-Home
 GITHUB_CATALOG_BRANCH=main
@@ -41,6 +43,8 @@ NEXT_PUBLIC_APP_URL=https://www.jiacraft.com
 
 **Important:** `TELEGRAM_ADMIN_IDS` must include your **personal user id** (positive number from [@userinfobot](https://t.me/userinfobot)), not only the group id.  
 You can add the group id too (starts with `-`) if you want anyone in that group to run catalog commands.
+
+Checkout orders are also sent to every id in `TELEGRAM_ADMIN_IDS` (and optional `TELEGRAM_ORDER_CHAT_IDS`). Open a DM with the bot once so it can message you.
 
 In a group, send `/id` to the bot to see both ids. Then Redeploy after updating Vercel.
 
@@ -199,3 +203,12 @@ image: https://images.unsplash.com/photo-1603006905004-abd84d2429d2?w=1200&q=80
 Or send a **photo** with the same caption fields (include at least `title` and `price`).
 
 Updates are written to `src/data/catalog.json` on GitHub and appear on the site within seconds (no manual redeploy needed for catalog content).
+
+## Checkout → Telegram
+
+On the website checkout page:
+
+1. Customer can tap **Use my location** to fill address fields (and pin lat/lng).
+2. On **Place order**, the shop receives a Telegram message with customer details, cart lines, and a Google Maps link when location was shared.
+
+Messages go to ids in `TELEGRAM_ADMIN_IDS` and optional `TELEGRAM_ORDER_CHAT_IDS`.
