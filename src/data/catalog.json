@@ -16,7 +16,7 @@
       "id": "cat-mtej32qh",
       "name": "Jewellery",
       "slug": "jewellery",
-      "image": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80"
+      "image": "https://raw.githubusercontent.com/amantoon-lang/The-Crafted-Home/main/public/catalog-images/jewellery-1788019020138.jpg"
     }
   ],
   "products": [
@@ -126,5 +126,43 @@
       "categorySlug": "wooden-decor",
       "label": "Wooden Decor"
     }
-  ]
+  ],
+  "homeSections": {
+    "hero": {
+      "visible": true,
+      "itemIds": []
+    },
+    "collections": {
+      "visible": true,
+      "itemIds": []
+    },
+    "featured": {
+      "visible": true,
+      "itemIds": []
+    },
+    "trending": {
+      "visible": true,
+      "itemIds": []
+    },
+    "bestsellers": {
+      "visible": true,
+      "itemIds": []
+    },
+    "artisans": {
+      "visible": true,
+      "itemIds": []
+    },
+    "whyHandmade": {
+      "visible": true,
+      "itemIds": []
+    },
+    "testimonials": {
+      "visible": true,
+      "itemIds": []
+    },
+    "atelier": {
+      "visible": true,
+      "itemIds": []
+    }
+  }
 }
