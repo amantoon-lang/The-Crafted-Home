@@ -8,14 +8,14 @@ import { Quote, Leaf, HandHeart, Truck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-/** Scene photos matched to craft materials — used when a category still has a generic stock image. */
+/** Craft-specific scenes when a category has no product photo and still uses generic stock. */
 const CATEGORY_SCENES: Record<string, string> = {
   decor:
     "https://images.unsplash.com/photo-1615874959474-d609969a20ed?w=800&q=80",
   "home-decor":
     "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&q=80",
   "home-furnishing":
-    "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80",
+    "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=800&q=80",
   jewellery:
     "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&q=80",
   jewelry:
@@ -32,19 +32,21 @@ const CATEGORY_SCENES: Record<string, string> = {
     "https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=800&q=80",
 };
 
+/** Repeated placeholder images that should not appear as category covers. */
 const GENERIC_STOCK = [
-  "photo-1616486338812-3dadae4b4ace", // repeated wood living-room stock
+  "photo-1616486338812-3dadae4b4ace",
 ];
 
 function isGenericStock(url: string) {
   return GENERIC_STOCK.some((id) => url.includes(id));
 }
 
-function categoryDisplayImage(category: {
-  slug: string;
-  image: string;
-  name: string;
-}) {
+function categoryDisplayImage(
+  category: { slug: string; image: string; name: string },
+  productImageByCategory?: Map<string, string>
+) {
+  const fromProduct = productImageByCategory?.get(category.slug);
+  if (fromProduct) return fromProduct;
   if (category.image && !isGenericStock(category.image)) {
     return category.image;
   }
@@ -111,6 +113,16 @@ export default async function HomePage() {
     ).values(),
   ].slice(0, 4);
 
+  // Prefer a real product photo for each category cover when available
+  const productImageByCategory = new Map<string, string>();
+  for (const product of latest) {
+    const slug = product.category?.slug;
+    const img = product.images?.[0];
+    if (slug && img && !productImageByCategory.has(slug)) {
+      productImageByCategory.set(slug, img);
+    }
+  }
+
   // Hero: real catalog craft photo when available
   const heroImage =
     latest.find((p) => p.images?.[0])?.images[0] ||
@@ -122,7 +134,7 @@ export default async function HomePage() {
   // Atelier strip: actual product photos, then category scenes
   const atelierImages = [
     ...latest.flatMap((p) => p.images.slice(0, 2)),
-    ...categories.map((c) => categoryDisplayImage(c)),
+    ...categories.map((c) => categoryDisplayImage(c, productImageByCategory)),
   ]
     .filter(Boolean)
     .filter((url, i, arr) => arr.indexOf(url) === i)
@@ -204,7 +216,7 @@ export default async function HomePage() {
                 className="image-zoom group relative block aspect-[4/5] overflow-hidden rounded-2xl"
               >
                 <Image
-                  src={categoryDisplayImage(category)}
+                  src={categoryDisplayImage(category, productImageByCategory)}
                   alt={`${category.name} — handmade collection`}
                   fill
                   className="object-cover"
