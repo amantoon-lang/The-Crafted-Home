@@ -22,13 +22,14 @@
   "products": [
     {
       "id": "prod-mtelairc",
-      "title": "Wooden coaster peach",
+      "title": "Peach Wooden Coaster",
       "slug": "wooden-coaster-peach",
       "description": "Wooden coaster peach",
       "story": "",
-      "price": 600,
+      "price": 599,
       "discount": 0,
       "images": [
+        "https://raw.githubusercontent.com/amantoon-lang/The-Crafted-Home/main/public/catalog-images/product-1788021793593.jpg",
         "https://raw.githubusercontent.com/amantoon-lang/The-Crafted-Home/main/public/catalog-images/wooden-coaster-peach-1788020586164.jpg"
       ],
       "video": null,
