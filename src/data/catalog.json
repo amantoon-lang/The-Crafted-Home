@@ -250,5 +250,10 @@
       "visible": true,
       "itemIds": []
     }
+  },
+  "siteMedia": {
+    "landing": {
+      "image": "https://raw.githubusercontent.com/amantoon-lang/The-Crafted-Home/main/public/catalog-images/site-landing-1788021528892.jpg"
+    }
   }
 }
