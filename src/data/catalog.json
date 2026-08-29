@@ -21,6 +21,35 @@
   ],
   "products": [
     {
+      "id": "prod-mtekvy72",
+      "title": "White pearled necklace",
+      "slug": "white-pearled-necklace",
+      "description": "White pearled necklace",
+      "story": "",
+      "price": 699,
+      "discount": 0,
+      "images": [
+        "https://raw.githubusercontent.com/amantoon-lang/The-Crafted-Home/main/public/catalog-images/white-pearled-necklace-1788019906170.jpg"
+      ],
+      "video": null,
+      "stock": 10,
+      "artisan": "The Crafted Home",
+      "materials": "Handmade",
+      "dimensions": "",
+      "rating": 5,
+      "reviewCount": 0,
+      "featured": false,
+      "trending": false,
+      "bestSeller": false,
+      "categoryId": "cat-wooden",
+      "category": {
+        "name": "Home Decor",
+        "slug": "wooden-decor"
+      },
+      "createdAt": "2026-08-29T16:11:47.294Z",
+      "reviews": []
+    },
+    {
       "id": "prod-mtefhv70",
       "title": "wooden mirror artwork Pooja thali",
       "slug": "wooden-mirror-artwork-pooja-thali",
