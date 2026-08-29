@@ -42,6 +42,7 @@ export async function GET(
       price: product.price,
       discount: product.discount,
       images: product.images,
+      video: product.video || null,
       artisan: product.artisan,
       rating: product.rating,
       reviewCount: product.reviewCount,

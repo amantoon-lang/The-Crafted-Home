@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Heart, Minus, Plus, Star, Truck } from "lucide-react";
+import { Heart, Minus, Plus, Star, Truck, Play } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +24,7 @@ export default function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
+  const [showVideo, setShowVideo] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const { triggerCartAnimation } = useUIStore();
   const { has, toggle } = useWishlistStore();
@@ -65,6 +66,8 @@ export default function ProductDetailPage() {
   const product = data.product;
   const salePrice = calculateSalePrice(product.price, product.discount);
   const wished = has(product.id);
+  const images: string[] = product.images?.length ? product.images : [];
+  const videoUrl: string | null = product.video || null;
 
   const addToCart = () => {
     addItem(product, qty);
@@ -79,38 +82,70 @@ export default function ProductDetailPage() {
           <div
             className={cn(
               "relative aspect-square overflow-hidden rounded-2xl bg-secondary",
-              zoomed && "cursor-zoom-out"
+              !showVideo && zoomed && "cursor-zoom-out"
             )}
-            onClick={() => setZoomed(!zoomed)}
+            onClick={() => {
+              if (!showVideo) setZoomed(!zoomed);
+            }}
           >
-            <Image
-              src={product.images[activeImage]}
-              alt={product.title}
-              fill
-              priority
-              className={cn(
-                "object-cover transition-transform duration-500",
-                zoomed && "scale-150"
-              )}
-              sizes="(max-width:1024px) 100vw, 50vw"
-            />
+            {showVideo && videoUrl ? (
+              <video
+                key={videoUrl}
+                src={videoUrl}
+                controls
+                playsInline
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : (
+              <Image
+                src={images[activeImage] || images[0]}
+                alt={product.title}
+                fill
+                priority
+                className={cn(
+                  "object-cover transition-transform duration-500",
+                  zoomed && "scale-150"
+                )}
+                sizes="(max-width:1024px) 100vw, 50vw"
+              />
+            )}
           </div>
-          <div className="mt-3 flex gap-3 overflow-x-auto">
-            {product.images.map((img: string, i: number) => (
+          <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
+            {images.map((img: string, i: number) => (
               <button
-                key={img}
+                key={`${img}-${i}`}
+                type="button"
                 onClick={() => {
                   setActiveImage(i);
+                  setShowVideo(false);
                   setZoomed(false);
                 }}
                 className={cn(
                   "relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2",
-                  activeImage === i ? "border-primary" : "border-transparent"
+                  !showVideo && activeImage === i
+                    ? "border-primary"
+                    : "border-transparent"
                 )}
               >
                 <Image src={img} alt="" fill className="object-cover" sizes="80px" />
               </button>
             ))}
+            {videoUrl && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowVideo(true);
+                  setZoomed(false);
+                }}
+                className={cn(
+                  "relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border-2 bg-foreground/90 text-background",
+                  showVideo ? "border-primary" : "border-transparent"
+                )}
+                aria-label="Play product video"
+              >
+                <Play className="h-7 w-7 fill-current" />
+              </button>
+            )}
           </div>
         </div>
 

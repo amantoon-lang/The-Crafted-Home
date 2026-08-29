@@ -7,6 +7,8 @@ export type ProductCardData = {
   price: number;
   discount: number;
   images: string[];
+  /** Optional product video URL (mp4/webm). */
+  video?: string | null;
   artisan: string;
   rating: number;
   reviewCount: number;

@@ -33,6 +33,10 @@ export type CatalogData = {
 
 const CATALOG_PATH = "src/data/catalog.json";
 const IMAGE_DIR = "public/catalog-images";
+const VIDEO_DIR = "public/catalog-videos";
+
+/** Products support at least 5 photos; hard cap keeps GitHub uploads manageable. */
+export const MAX_PRODUCT_IMAGES = 8;
 
 function githubConfig() {
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
@@ -125,6 +129,29 @@ export async function uploadCatalogImage(
     path,
     bytes.toString("base64"),
     message || `telegram: upload image ${safe}`
+  );
+  return saved;
+}
+
+/** Host a product video in the repo (mp4/webm). Keep files modest for GitHub. */
+export async function uploadCatalogVideo(
+  bytes: Buffer,
+  filename: string,
+  message?: string
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const maxBytes = 18 * 1024 * 1024; // Telegram bot download limit ~20MB
+  if (bytes.length > maxBytes) {
+    return {
+      ok: false,
+      error: `Video is too large (${Math.round(bytes.length / 1024 / 1024)}MB). Keep under 18MB.`,
+    };
+  }
+  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "-");
+  const path = `${VIDEO_DIR}/${safe}`;
+  const saved = await putGithubFile(
+    path,
+    bytes.toString("base64"),
+    message || `telegram: upload video ${safe}`
   );
   return saved;
 }
@@ -297,6 +324,17 @@ export function createProductFromFields(
   }
 
   const image = fields.image?.trim();
+  const imagesFromField = (fields.images || "")
+    .split(/[,|\n]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const images = [
+    ...imagesFromField,
+    ...(image && !imagesFromField.includes(image) ? [image] : []),
+  ].slice(0, MAX_PRODUCT_IMAGES);
+
+  const video = fields.video?.trim() || null;
+
   const product: CatalogProduct = {
     id: `prod-${Date.now().toString(36)}`,
     title,
@@ -305,11 +343,12 @@ export function createProductFromFields(
     story: fields.story?.trim() || "",
     price: Math.round(price),
     discount: Number(fields.discount || 0) || 0,
-    images: image
-      ? [image]
+    images: images.length
+      ? images
       : [
           "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1200&q=80",
         ],
+    video,
     stock: Number(fields.stock || 10) || 10,
     artisan: fields.artisan?.trim() || "The Crafted Home",
     materials: fields.materials?.trim() || "Handmade",

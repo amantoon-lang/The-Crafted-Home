@@ -65,7 +65,12 @@ Message your bot:
 | `/price hand-carved-oak-serving-board 7999` | set price to ₹7,999 |
 | `/stock hand-carved-oak-serving-board 20` | set stock |
 | `/discount hand-carved-oak-serving-board 10` | 10% off |
-| `/image slug https://...` | change image |
+| `/image slug` | set cover photo (first image) |
+| `/photos slug` | list photos + video |
+| `/photo slug` | add a photo (up to 8; send photo with this caption) |
+| `/delphoto slug n` | remove photo #n |
+| `/video slug` | set product video (send video with this caption, under 18MB) |
+| `/delvideo slug` | remove video |
 | `/remove` or `/delete` | tappable list of products to delete |
 | `/remove &lt;slug or title&gt;` | confirm delete for that listing |
 | `/categories` | list categories |
@@ -73,6 +78,48 @@ Message your bot:
 | `/setcategory &lt;slug&gt;` | rename or change category image |
 | `/rmcategory` | remove an empty category |
 | `/add` | multi-line add (see below) |
+
+### Product photos & video
+
+Each listing can have **up to 8 photos** (use at least 5 for a rich gallery) and **1 video**.
+
+After `/add`, send more photos one by one:
+
+```text
+# caption on each photo
+/photo wooden-mirror-artwork-pooja-thali
+```
+
+Set or replace the cover (first) photo:
+
+```text
+/image wooden-mirror-artwork-pooja-thali
+```
+
+List media:
+
+```text
+/photos wooden-mirror-artwork-pooja-thali
+```
+
+Remove photo #2:
+
+```text
+/delphoto wooden-mirror-artwork-pooja-thali 2
+```
+
+Add a video (Telegram video or file under 18MB):
+
+```text
+/video wooden-mirror-artwork-pooja-thali
+```
+
+Or in `/add` fields:
+
+```text
+images: https://.../1.jpg, https://.../2.jpg, https://.../3.jpg
+video: https://.../clip.mp4
+```
 
 ### Categories
 
