@@ -180,9 +180,8 @@
       "label": "Home furnishing"
     },
     {
-      "type": "category",
-      "categorySlug": "wooden-decor",
-      "label": "Wooden Decor"
+      "type": "shop",
+      "label": "Shop"
     }
   ],
   "homeSections": {
