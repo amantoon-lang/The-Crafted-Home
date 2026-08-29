@@ -53,15 +53,30 @@ Message your bot:
 
 | Command | Example |
 |---------|---------|
-| `/list` | list all products |
-| `/get hand-carved-oak-serving-board` | details |
+| `/list` | list all products (includes remove command) |
+| `/get blue-ceramic-vase` | details |
 | `/price hand-carved-oak-serving-board 7999` | set price to ₹7,999 |
 | `/stock hand-carved-oak-serving-board 20` | set stock |
 | `/discount hand-carved-oak-serving-board 10` | 10% off |
-| `/image slug https://...` | change image |
-| `/delete slug` | remove product |
+| `/image slug` | send a **photo** with this caption to set image |
+| `/remove blue-ceramic-vase` | **remove listing** (also `/delete`) |
+| `/remove Blue Ceramic Vase` | remove by title |
 | `/categories` | category slugs |
 | `/add` | multi-line add (see below) |
+
+### Remove a product
+
+```
+/remove blue-ceramic-vase
+```
+
+or by title:
+
+```
+/remove Blue Ceramic Vase
+```
+
+Use `/list` first if you need the exact slug.
 
 ### Add a product
 

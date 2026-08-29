@@ -86,15 +86,15 @@ function helpText() {
 Prices are in <b>INR (₹)</b>.
 
 <b>Commands</b>
-/list — list products
-/get &lt;slug&gt; — product details
+/list — list products (shows slug to use in other commands)
+/get &lt;slug or title&gt; — product details
 /price &lt;slug&gt; &lt;amount&gt; — set price in ₹
 /stock &lt;slug&gt; &lt;qty&gt; — set stock
 /discount &lt;slug&gt; &lt;percent&gt; — set discount %
-/image &lt;slug&gt; &lt;url&gt; — set main image URL
-/delete &lt;slug&gt; — remove product
+/image &lt;slug&gt; — send a photo with this caption, or /image &lt;slug&gt; &lt;url&gt;
+/remove &lt;slug or title&gt; — remove a listing (alias: /delete)
 /categories — list category slugs
-/add — add product (send as multi-line message):
+/add — add product (multi-line):
 
 <code>/add
 title: Blue Ceramic Vase
@@ -105,7 +105,27 @@ stock: 12
 description: Handmade vase
 image: https://...</code>
 
-Or send a <b>photo</b> with caption using the same key:value lines (include title + price).`;
+Or send a <b>photo</b> with caption using the same key:value lines (include title + price).
+
+<b>Remove example</b>
+<code>/remove blue-ceramic-vase</code>
+or
+<code>/remove Blue Ceramic Vase</code>`;
+}
+
+function findProductIndex(data: CatalogData, query: string): number {
+  const q = query.trim().toLowerCase();
+  if (!q) return -1;
+  const bySlug = data.products.findIndex((p) => p.slug.toLowerCase() === q);
+  if (bySlug !== -1) return bySlug;
+  const exactTitle = data.products.findIndex(
+    (p) => p.title.toLowerCase() === q
+  );
+  if (exactTitle !== -1) return exactTitle;
+  const partial = data.products.findIndex((p) =>
+    p.title.toLowerCase().includes(q)
+  );
+  return partial;
 }
 
 function listProducts(data: CatalogData) {
@@ -113,7 +133,7 @@ function listProducts(data: CatalogData) {
   return data.products
     .map(
       (p, i) =>
-        `${i + 1}. <b>${p.title}</b>\n   ${formatCurrency(p.price)} · stock ${p.stock}\n   <code>${p.slug}</code>`
+        `${i + 1}. <b>${p.title}</b>\n   ${formatCurrency(p.price)} · stock ${p.stock}\n   slug: <code>${p.slug}</code>\n   remove: <code>/remove ${p.slug}</code>`
     )
     .join("\n\n");
 }
@@ -174,15 +194,16 @@ export async function POST(req: Request) {
     }
 
     if (cmd === "/get") {
-      const slug = rest[0];
-      const product = catalog.products.find((p) => p.slug === slug);
-      if (!product) {
-        await sendMessage(chatId, `Product not found: <code>${slug || "?"}</code>`);
+      const query = rest.join(" ").trim();
+      const idx = findProductIndex(catalog, query);
+      if (idx === -1) {
+        await sendMessage(chatId, `Product not found: <code>${query || "?"}</code>`);
         return NextResponse.json({ ok: true });
       }
+      const product = catalog.products[idx];
       await sendMessage(
         chatId,
-        `<b>${product.title}</b>\nPrice: ${formatCurrency(product.price)}\nDiscount: ${product.discount}%\nStock: ${product.stock}\nCategory: ${product.category?.slug}\nArtisan: ${product.artisan}\nSlug: <code>${product.slug}</code>\nImage: ${product.images[0]}`
+        `<b>${product.title}</b>\nPrice: ${formatCurrency(product.price)}\nDiscount: ${product.discount}%\nStock: ${product.stock}\nCategory: ${product.category?.slug}\nArtisan: ${product.artisan}\nSlug: <code>${product.slug}</code>\nRemove: <code>/remove ${product.slug}</code>\nImage: ${product.images[0]}`
       );
       return NextResponse.json({ ok: true });
     }
@@ -269,23 +290,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    if (cmd === "/delete") {
-      const slug = rest[0];
-      const before = catalog.products.length;
-      catalog.products = catalog.products.filter((p) => p.slug !== slug);
-      if (catalog.products.length === before) {
-        await sendMessage(chatId, `Product not found: <code>${slug || "?"}</code>`);
+    if (cmd === "/delete" || cmd === "/remove") {
+      const query = rest.join(" ").trim();
+      if (!query) {
+        await sendMessage(
+          chatId,
+          "Usage: <code>/remove &lt;slug or title&gt;</code>\nTip: send /list to copy a slug."
+        );
         return NextResponse.json({ ok: true });
       }
+
+      const idx = findProductIndex(catalog, query);
+      if (idx === -1) {
+        await sendMessage(
+          chatId,
+          `No listing found for <code>${query}</code>\nSend /list to see products.`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      const removed = catalog.products[idx];
+      catalog.products.splice(idx, 1);
       const saved = await saveCatalog(
         catalog,
-        `telegram: delete ${slug} by ${message.from?.username || fromId}`
+        `telegram: remove ${removed.slug} by ${message.from?.username || fromId}`
       );
       if (!saved.ok) {
         await sendMessage(chatId, `Failed to save: ${saved.error}`);
         return NextResponse.json({ ok: true });
       }
-      await sendMessage(chatId, `Deleted <code>${slug}</code>`);
+      await sendMessage(
+        chatId,
+        `Removed listing <b>${removed.title}</b>\n<code>${removed.slug}</code>\nIt will disappear from the shop shortly.`
+      );
       return NextResponse.json({ ok: true });
     }
 
