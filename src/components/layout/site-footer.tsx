@@ -1,29 +1,62 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const footerLinks = {
-  Shop: [
-    { href: "/shop", label: "All Products" },
-    { href: "/shop?category=ceramics", label: "Ceramics" },
-    { href: "/shop?category=macrame", label: "Macrame" },
-    { href: "/shop?category=candles", label: "Candles" },
-  ],
-  Company: [
-    { href: "/#artisans", label: "Artisans" },
-    { href: "/#why-handmade", label: "Why Handmade" },
-    { href: "/#testimonials", label: "Stories" },
-  ],
-  Account: [
-    { href: "/login", label: "Sign in" },
-    { href: "/signup", label: "Create account" },
-    { href: "/orders", label: "Orders" },
-    { href: "/wishlist", label: "Wishlist" },
-  ],
-};
+type FooterLink = { href: string; label: string };
+
+const companyLinks: FooterLink[] = [
+  { href: "/#artisans", label: "Artisans" },
+  { href: "/#why-handmade", label: "Why Handmade" },
+  { href: "/#testimonials", label: "Stories" },
+];
+
+const accountLinks: FooterLink[] = [
+  { href: "/login", label: "Sign in" },
+  { href: "/signup", label: "Create account" },
+  { href: "/orders", label: "Orders" },
+  { href: "/wishlist", label: "Wishlist" },
+];
 
 export function SiteFooter() {
+  const [shopLinks, setShopLinks] = useState<FooterLink[]>([
+    { href: "/shop", label: "All Products" },
+  ]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/categories");
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          categories?: { name: string; slug: string }[];
+        };
+        const cats = (data.categories || []).slice(0, 6).map((c) => ({
+          href: `/shop?category=${c.slug}`,
+          label: c.name,
+        }));
+        if (!cancelled) {
+          setShopLinks([{ href: "/shop", label: "All Products" }, ...cats]);
+        }
+      } catch {
+        // keep default
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const sections: [string, FooterLink[]][] = [
+    ["Shop", shopLinks],
+    ["Company", companyLinks],
+    ["Account", accountLinks],
+  ];
+
   return (
     <footer className="mt-24 border-t border-border bg-secondary/60">
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
@@ -50,7 +83,7 @@ export function SiteFooter() {
             </form>
           </div>
 
-          {Object.entries(footerLinks).map(([title, links]) => (
+          {sections.map(([title, links]) => (
             <div key={title}>
               <h3 className="text-sm font-semibold tracking-wide text-foreground">{title}</h3>
               <ul className="mt-4 space-y-2.5">

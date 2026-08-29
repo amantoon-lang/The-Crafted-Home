@@ -68,8 +68,52 @@ Message your bot:
 | `/image slug https://...` | change image |
 | `/remove` or `/delete` | tappable list of products to delete |
 | `/remove &lt;slug or title&gt;` | confirm delete for that listing |
-| `/categories` | category slugs |
+| `/categories` | list categories (site order) |
+| `/addcategory` | add a top-nav / homepage category |
+| `/setcategory &lt;slug&gt;` | rename or change category image |
+| `/movecategory &lt;slug&gt; &lt;n&gt;` | set order (`1` = top) |
+| `/rmcategory` | remove an empty category |
 | `/add` | multi-line add (see below) |
+
+### Categories (homepage + top nav)
+
+Category **order in Telegram is the order on the site** (homepage collections and header links).
+
+List them:
+
+```text
+/categories
+```
+
+Add one (multi-line), or send a **photo** with the same caption:
+
+```text
+/addcategory
+name: Textiles
+slug: textiles
+image: https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=800&q=80
+```
+
+Rename / change image:
+
+```text
+/setcategory textiles
+name: Soft Textiles
+```
+
+Or send a photo with caption `/setcategory textiles`.
+
+Reorder (`1` = first on homepage and in the header):
+
+```text
+/movecategory textiles 1
+```
+
+Remove (only if no products use it) — send `/rmcategory` for a tappable list, or:
+
+```text
+/rmcategory textiles
+```
 
 ### Delete a listing
 

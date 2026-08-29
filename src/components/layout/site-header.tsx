@@ -21,11 +21,11 @@ import { useUIStore, useGuestCartStore } from "@/store";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
-const navLinks = [
+type NavLink = { href: string; label: string };
+
+const baseNavLinks: NavLink[] = [
   { href: "/shop", label: "Shop" },
   { href: "/shop?sort=popularity", label: "Bestsellers" },
-  { href: "/shop?category=ceramics", label: "Ceramics" },
-  { href: "/shop?category=wooden-decor", label: "Wood" },
 ];
 
 export function SiteHeader() {
@@ -37,9 +37,33 @@ export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [query, setQuery] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [navLinks, setNavLinks] = useState<NavLink[]>(baseNavLinks);
   const guestItems = useGuestCartStore((s) => s.items);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/categories");
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          categories?: { name: string; slug: string }[];
+        };
+        const top = (data.categories || []).slice(0, 4).map((c) => ({
+          href: `/shop?category=${c.slug}`,
+          label: c.name,
+        }));
+        if (!cancelled) setNavLinks([...baseNavLinks, ...top]);
+      } catch {
+        // keep base links
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
