@@ -5,6 +5,7 @@ import {
   createProductFromFields,
   createCategoryFromFields,
   applyCategoryUpdate,
+  applyProductUpdate,
   findCategoryIndex,
   parseKeyValueMessage,
   uploadCatalogImage,
@@ -27,6 +28,54 @@ import {
 import { formatCurrency } from "@/lib/utils";
 
 export const runtime = "nodejs";
+
+type InlineButton = { text: string; callback_data: string };
+type ReplyKeyboard = {
+  keyboard: { text: string }[][];
+  resize_keyboard?: boolean;
+  one_time_keyboard?: boolean;
+};
+type ReplyMarkup =
+  | { inline_keyboard: InlineButton[][] }
+  | ReplyKeyboard
+  | { remove_keyboard: true };
+
+type SessionFlow =
+  | "prod_add"
+  | "prod_edit"
+  | "cat_add"
+  | "cat_img";
+
+type SessionDraft = {
+  flow: SessionFlow;
+  step: "name" | "price" | "photo";
+  productId?: string;
+  categoryId?: string;
+  fields: Record<string, string>;
+  updatedAt: number;
+};
+
+/** In-memory drafts for guided multi-step flows (admin bot; resets on cold start). */
+const sessions = new Map<number, SessionDraft>();
+const SESSION_TTL_MS = 15 * 60 * 1000;
+
+function getSession(chatId: number): SessionDraft | undefined {
+  const s = sessions.get(chatId);
+  if (!s) return undefined;
+  if (Date.now() - s.updatedAt > SESSION_TTL_MS) {
+    sessions.delete(chatId);
+    return undefined;
+  }
+  return s;
+}
+
+function setSession(chatId: number, draft: SessionDraft) {
+  sessions.set(chatId, { ...draft, updatedAt: Date.now() });
+}
+
+function clearSession(chatId: number) {
+  sessions.delete(chatId);
+}
 
 type TelegramUpdate = {
   message?: {
@@ -62,8 +111,6 @@ type TelegramUpdate = {
     };
   };
 };
-
-type InlineButton = { text: string; callback_data: string };
 
 function adminIds(): Set<string> {
   return new Set(
@@ -112,7 +159,7 @@ function botToken() {
 async function sendMessage(
   chatId: number,
   text: string,
-  replyMarkup?: { inline_keyboard: InlineButton[][] }
+  replyMarkup?: ReplyMarkup
 ) {
   const token = botToken();
   if (!token) return;
@@ -238,34 +285,202 @@ function helpText() {
 
 Prices are in <b>INR (₹)</b>.
 
-<b>Products</b>
-/list — list products
-/get &lt;slug&gt; — product details
-/price &lt;slug&gt; &lt;amount&gt; — set price in ₹
-/stock &lt;slug&gt; &lt;qty&gt; — set stock
-/discount &lt;slug&gt; &lt;percent&gt; — set discount %
-/photos &lt;slug&gt; — list photos + video
-/photo &lt;slug&gt; — add a photo (up to ${MAX_PRODUCT_IMAGES}; send photo with this caption)
-/image &lt;slug&gt; — set cover photo (first image)
-/delphoto &lt;slug&gt; &lt;n&gt; — remove photo #n
-/video &lt;slug&gt; — set product video (send video with this caption)
-/delvideo &lt;slug&gt; — remove video
-/remove — tappable list to delete a listing (alias: /delete)
-/add — add product (multi-line or photo + caption)
+Use the <b>4 menu buttons</b> below (or tap the options):
 
-<b>Categories</b>
-/categories — list + add / edit / remove
-/addcategory — add a category
-/setcategory &lt;slug&gt; — rename or change image
-/rmcategory — remove a category
+1️⃣ <b>Products</b> — add / edit / delete (name, price, photo)
+2️⃣ <b>Categories</b> — add / remove / set image, then tag a product
+3️⃣ <b>Top Nav</b> — add / remove / edit the 4 header links
+4️⃣ <b>Homepage</b> — show / hide / edit sections + attach products
 
-<b>Top header</b>
-/nav — edit the 4 top links (Shop, Bestsellers, collections)
+Send /menu anytime to reopen this menu.
+Send /cancel to abort a guided step.`;
+}
 
-<b>Homepage</b>
-/home — show/hide sections + pick which items appear
+function mainMenuKeyboard(): ReplyKeyboard {
+  return {
+    keyboard: [
+      [{ text: "Products" }, { text: "Categories" }],
+      [{ text: "Top Nav" }, { text: "Homepage" }],
+    ],
+    resize_keyboard: true,
+  };
+}
 
-Each product can have <b>up to ${MAX_PRODUCT_IMAGES} photos</b> and <b>1 video</b>.`;
+function mainMenuInline() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "1️⃣ Products", callback_data: "menu:products" },
+        { text: "2️⃣ Categories", callback_data: "menu:cats" },
+      ],
+      [
+        { text: "3️⃣ Top Nav", callback_data: "menu:nav" },
+        { text: "4️⃣ Homepage", callback_data: "menu:home" },
+      ],
+    ],
+  };
+}
+
+function productsHubText() {
+  return `<b>Products</b>\nAdd, edit, or delete a listing.\nEach flow asks for <b>name → price → photo</b>.`;
+}
+
+function buildProductsHubKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "Add product", callback_data: "prod:add" },
+        { text: "Edit product", callback_data: "prod:edit" },
+      ],
+      [{ text: "Delete product", callback_data: "prod:rm" }],
+      [{ text: "« Main menu", callback_data: "menu:main" }],
+    ],
+  };
+}
+
+function categoriesHubText() {
+  return `<b>Categories</b>\nAdd, remove, or set an image.\nAfterward you'll pick which <b>product</b> belongs in that category.`;
+}
+
+function buildCategoriesHubKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "Add category", callback_data: "cat:add" },
+        { text: "Remove category", callback_data: "cat:rm" },
+      ],
+      [
+        { text: "Set image", callback_data: "cat:img" },
+        { text: "Tag product", callback_data: "cat:tag" },
+      ],
+      [{ text: "« Main menu", callback_data: "menu:main" }],
+    ],
+  };
+}
+
+function topNavHubText(data: CatalogData) {
+  return (
+    `<b>Top Nav</b>\nFour header links. Add / edit attaches Shop, Bestsellers, or a category. Remove clears a slot back to Shop.\n\n` +
+    listTopNav(data)
+  );
+}
+
+function buildTopNavHubKeyboard() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "Add / Edit slot", callback_data: "nav:edit" },
+        { text: "Remove slot", callback_data: "nav:clear" },
+      ],
+      [{ text: "« Main menu", callback_data: "menu:main" }],
+    ],
+  };
+}
+
+function homepageHubText(data: CatalogData) {
+  return (
+    `<b>Homepage</b>\nAdd = show a section + attach products.\nRemove = hide a section.\nEdit = change which products are attached.\n\n` +
+    listHomeSections(data)
+  );
+}
+
+function buildHomepageHubKeyboard(data: CatalogData) {
+  const sections = ensureHomeSections(data);
+  const rows: InlineButton[][] = [
+    [
+      { text: "Add section", callback_data: "home:add" },
+      { text: "Remove section", callback_data: "home:rm" },
+    ],
+    [{ text: "Edit section items", callback_data: "home:edit" }],
+  ];
+  for (const meta of HOME_SECTION_META) {
+    const on = sections[meta.key].visible;
+    rows.push([
+      {
+        text: truncateLabel(
+          `${on ? "✓" : "○"} ${meta.label}`,
+          40
+        ),
+        callback_data: `homesec:${meta.short}`,
+      },
+    ]);
+  }
+  rows.push([{ text: "« Main menu", callback_data: "menu:main" }]);
+  return { inline_keyboard: rows };
+}
+
+function buildProductEditPicker(catalog: CatalogData) {
+  const products = catalog.products.slice(0, 40);
+  const inline_keyboard: InlineButton[][] = products.map((p) => [
+    {
+      text: truncateLabel(`✏️ ${p.title} · ${formatCurrency(p.price)}`),
+      callback_data: `prodpick:${p.id}`,
+    },
+  ]);
+  inline_keyboard.push([{ text: "« Back", callback_data: "menu:products" }]);
+  return { inline_keyboard };
+}
+
+function buildTagProductPicker(catalog: CatalogData) {
+  const products = catalog.products.slice(0, 40);
+  const inline_keyboard: InlineButton[][] = products.map((p) => [
+    {
+      text: truncateLabel(`${p.title}`),
+      callback_data: `tagprod:${p.id}`,
+    },
+  ]);
+  inline_keyboard.push([{ text: "« Back", callback_data: "menu:cats" }]);
+  return { inline_keyboard };
+}
+
+function buildNavClearPicker(catalog: CatalogData) {
+  const slots = ensureTopNav(catalog);
+  return {
+    inline_keyboard: [
+      ...slots.map((s, i) => [
+        {
+          text: truncateLabel(`Clear ${i + 1}. ${s.label || s.type}`),
+          callback_data: `navclear:${i}`,
+        },
+      ]),
+      [{ text: "« Back", callback_data: "menu:nav" }],
+    ],
+  };
+}
+
+function buildHomeActionPicker(
+  action: "add" | "rm" | "edit",
+  data: CatalogData
+) {
+  const sections = ensureHomeSections(data);
+  const metas =
+    action === "edit"
+      ? HOME_SECTION_META.filter((m) => m.itemKind !== "none")
+      : HOME_SECTION_META;
+  const rows: InlineButton[][] = metas.map((meta) => {
+    const on = sections[meta.key].visible;
+    let cb = `homesec:${meta.short}`;
+    if (action === "add") cb = `homevis:${meta.short}:1`;
+    if (action === "rm") cb = `homevis:${meta.short}:0`;
+    if (action === "edit") cb = `homeitems:${meta.short}`;
+    return [
+      {
+        text: truncateLabel(`${on ? "✓" : "○"} ${meta.label}`, 40),
+        callback_data: cb,
+      },
+    ];
+  });
+  rows.push([{ text: "« Back", callback_data: "menu:home" }]);
+  return { inline_keyboard: rows };
+}
+
+async function openMainMenu(chatId: number) {
+  await sendMessage(chatId, helpText(), mainMenuKeyboard());
+  await sendMessage(
+    chatId,
+    "Pick a global option:",
+    mainMenuInline()
+  );
 }
 
 function describeNavSlot(slot: TopNavSlot, i: number) {
@@ -297,7 +512,7 @@ function buildNavHubKeyboard(data: CatalogData) {
     inline_keyboard: [
       slotButtons.slice(0, 2),
       slotButtons.slice(2, 4),
-      [{ text: "Refresh", callback_data: "navrefresh" }],
+      [{ text: "Refresh", callback_data: "menu:nav" }],
     ],
   };
 }
@@ -348,7 +563,7 @@ function buildNavTypePicker(slotIndex: number, catalog: CatalogData) {
       },
     ]);
   }
-  rows.push([{ text: "« Back", callback_data: "navrefresh" }]);
+  rows.push([{ text: "« Back", callback_data: "menu:nav" }]);
   return { inline_keyboard: rows };
 }
 
@@ -404,7 +619,7 @@ function buildHomeHubKeyboard(data: CatalogData) {
       },
     ]);
   }
-  rows.push([{ text: "Refresh", callback_data: "homehub" }]);
+  rows.push([{ text: "Refresh", callback_data: "menu:home" }]);
   return { inline_keyboard: rows };
 }
 
@@ -415,7 +630,7 @@ function buildHomeVisibilityKeyboard(short: string) {
         { text: "Show", callback_data: `homevis:${short}:1` },
         { text: "Hide", callback_data: `homevis:${short}:0` },
       ],
-      [{ text: "« Back", callback_data: "homehub" }],
+      [{ text: "« Back", callback_data: "menu:home" }],
     ],
   };
 }
@@ -474,7 +689,7 @@ function buildHomeItemsKeyboard(data: CatalogData, key: HomeSectionKey) {
 
   rows.push([
     { text: "Clear (auto)", callback_data: `homeclear:${meta.short}` },
-    { text: "Done", callback_data: "homehub" },
+    { text: "Done", callback_data: "menu:home" },
   ]);
   rows.push([{ text: "« Back", callback_data: `homesec:${meta.short}` }]);
   return { inline_keyboard: rows };
@@ -493,19 +708,6 @@ function navTypePickerIntro(slotIndex: number, catalog: CatalogData) {
     `Now: <b>${now}</b>\n\n` +
     `Choose Shop, Bestsellers, or a collection:`
   );
-}
-
-function buildCategoriesHubKeyboard() {
-  return {
-    inline_keyboard: [
-      [
-        { text: "Add category", callback_data: "navmanage:add" },
-        { text: "Edit category", callback_data: "navmanage:edit" },
-      ],
-      [{ text: "Remove category", callback_data: "navmanage:remove" }],
-      [{ text: "Close", callback_data: "navcancel" }],
-    ],
-  };
 }
 
 function buildCategoryEditPicker(catalog: CatalogData) {
@@ -560,7 +762,7 @@ function buildCategoryRemovePicker(catalog: CatalogData) {
       callback_data: `catrmpick:${c.id}`,
     },
   ]);
-  inline_keyboard.push([{ text: "« Back", callback_data: "cathub" }]);
+  inline_keyboard.push([{ text: "« Back", callback_data: "menu:cats" }]);
   return { inline_keyboard };
 }
 
@@ -582,6 +784,300 @@ function findProductIndex(data: CatalogData, query: string): number {
   const exactTitle = data.products.findIndex((p) => p.title.toLowerCase() === q);
   if (exactTitle !== -1) return exactTitle;
   return data.products.findIndex((p) => p.title.toLowerCase().includes(q));
+}
+
+async function handleSessionMessage(
+  chatId: number,
+  fromId: string,
+  message: NonNullable<TelegramUpdate["message"]>,
+  draft: SessionDraft,
+  text: string
+): Promise<boolean> {
+  const actor = message.from?.username || fromId;
+  const skip = text.trim() === "-";
+
+  // ——— Product add ———
+  if (draft.flow === "prod_add") {
+    if (draft.step === "name") {
+      if (!text || text.startsWith("/")) {
+        await sendMessage(chatId, "Send the product <b>name</b> as plain text.");
+        return true;
+      }
+      draft.fields.title = text.trim();
+      draft.step = "price";
+      setSession(chatId, draft);
+      await sendMessage(
+        chatId,
+        `Name: <b>${draft.fields.title}</b>\nStep 2/3 — send the <b>price in ₹</b> (numbers only).`
+      );
+      return true;
+    }
+    if (draft.step === "price") {
+      const price = Number(text.replace(/[₹,\s]/g, ""));
+      if (!Number.isFinite(price) || price <= 0) {
+        await sendMessage(chatId, "Send a positive price, e.g. <code>799</code>");
+        return true;
+      }
+      draft.fields.price = String(Math.round(price));
+      draft.step = "photo";
+      setSession(chatId, draft);
+      await sendMessage(
+        chatId,
+        `Price: <b>${formatCurrency(Math.round(price))}</b>\nStep 3/3 — send a <b>photo</b> of the product.`
+      );
+      return true;
+    }
+    if (draft.step === "photo") {
+      if (!message.photo?.length) {
+        await sendMessage(chatId, "Please send a <b>photo</b> (not a file link).");
+        return true;
+      }
+      const largest = message.photo[message.photo.length - 1];
+      const hosted = await hostTelegramPhoto(
+        largest.file_id,
+        (draft.fields.title || "product").toLowerCase().replace(/\s+/g, "-").slice(0, 40)
+      );
+      if (hosted.error || !hosted.url) {
+        await sendMessage(
+          chatId,
+          `Could not host photo: ${hosted.error || "unknown error"}`
+        );
+        return true;
+      }
+      draft.fields.image = hosted.url;
+      const catalog = await loadCatalog();
+      const created = createProductFromFields(catalog, draft.fields);
+      if (created.error || !created.product) {
+        await sendMessage(chatId, created.error || "Could not create product");
+        clearSession(chatId);
+        return true;
+      }
+      catalog.products.unshift(created.product);
+      const saved = await saveCatalog(
+        catalog,
+        `telegram: add ${created.product.slug} by ${actor}`
+      );
+      clearSession(chatId);
+      if (!saved.ok) {
+        await sendMessage(chatId, `Failed to save: ${saved.error}`);
+        return true;
+      }
+      await sendMessage(
+        chatId,
+        `Added <b>${created.product.title}</b>\n${formatCurrency(created.product.price)}\n\nTag it to a category:`,
+        buildCollectionPicker(created.product.id, catalog)
+      );
+      return true;
+    }
+  }
+
+  // ——— Product edit ———
+  if (draft.flow === "prod_edit" && draft.productId) {
+    if (draft.step === "name") {
+      if (!skip) {
+        if (!text || text.startsWith("/")) {
+          await sendMessage(
+            chatId,
+            "Send the new <b>name</b>, or <code>-</code> to keep the current name."
+          );
+          return true;
+        }
+        draft.fields.title = text.trim();
+      }
+      draft.step = "price";
+      setSession(chatId, draft);
+      await sendMessage(
+        chatId,
+        `Step 2/3 — send the new <b>price in ₹</b>, or <code>-</code> to keep.`
+      );
+      return true;
+    }
+    if (draft.step === "price") {
+      if (!skip) {
+        const price = Number(text.replace(/[₹,\s]/g, ""));
+        if (!Number.isFinite(price) || price <= 0) {
+          await sendMessage(
+            chatId,
+            "Send a positive price, or <code>-</code> to keep."
+          );
+          return true;
+        }
+        draft.fields.price = String(Math.round(price));
+      }
+      draft.step = "photo";
+      setSession(chatId, draft);
+      await sendMessage(
+        chatId,
+        `Step 3/3 — send a new <b>photo</b>, or send <code>-</code> to keep the current photo.`
+      );
+      return true;
+    }
+    if (draft.step === "photo") {
+      if (!skip) {
+        if (!message.photo?.length) {
+          await sendMessage(
+            chatId,
+            "Send a <b>photo</b>, or <code>-</code> to keep the current one."
+          );
+          return true;
+        }
+        const largest = message.photo[message.photo.length - 1];
+        const hosted = await hostTelegramPhoto(largest.file_id, "product");
+        if (hosted.error || !hosted.url) {
+          await sendMessage(
+            chatId,
+            `Could not host photo: ${hosted.error || "unknown error"}`
+          );
+          return true;
+        }
+        draft.fields.image = hosted.url;
+      }
+      const catalog = await loadCatalog();
+      const idx = catalog.products.findIndex((p) => p.id === draft.productId);
+      if (idx === -1) {
+        clearSession(chatId);
+        await sendMessage(chatId, "Product not found.");
+        return true;
+      }
+      const applied = applyProductUpdate(catalog, idx, draft.fields);
+      if (applied.error) {
+        await sendMessage(chatId, applied.error);
+        clearSession(chatId);
+        return true;
+      }
+      const product = catalog.products[idx];
+      const saved = await saveCatalog(
+        catalog,
+        `telegram: edit ${product.slug} by ${actor}`
+      );
+      clearSession(chatId);
+      if (!saved.ok) {
+        await sendMessage(chatId, `Failed to save: ${saved.error}`);
+        return true;
+      }
+      await sendMessage(
+        chatId,
+        `Updated <b>${product.title}</b>\n${formatCurrency(product.price)}\n\n${productsHubText()}`,
+        buildProductsHubKeyboard()
+      );
+      return true;
+    }
+  }
+
+  // ——— Category add ———
+  if (draft.flow === "cat_add") {
+    if (draft.step === "name") {
+      if (!text || text.startsWith("/")) {
+        await sendMessage(chatId, "Send the category <b>name</b>.");
+        return true;
+      }
+      draft.fields.name = text.trim();
+      draft.step = "photo";
+      setSession(chatId, draft);
+      await sendMessage(
+        chatId,
+        `Category: <b>${draft.fields.name}</b>\nStep 2/2 — send a <b>photo</b> for this category (or <code>-</code> to skip).`
+      );
+      return true;
+    }
+    if (draft.step === "photo") {
+      if (!skip) {
+        if (!message.photo?.length) {
+          await sendMessage(
+            chatId,
+            "Send a <b>photo</b>, or <code>-</code> to skip."
+          );
+          return true;
+        }
+        const largest = message.photo[message.photo.length - 1];
+        const hosted = await hostTelegramPhoto(
+          largest.file_id,
+          (draft.fields.name || "category").toLowerCase().replace(/\s+/g, "-").slice(0, 40)
+        );
+        if (hosted.error || !hosted.url) {
+          await sendMessage(
+            chatId,
+            `Could not host photo: ${hosted.error || "unknown error"}`
+          );
+          return true;
+        }
+        draft.fields.image = hosted.url;
+      }
+      const catalog = await loadCatalog();
+      const created = createCategoryFromFields(catalog, draft.fields);
+      if (created.error || !created.category) {
+        clearSession(chatId);
+        await sendMessage(chatId, created.error || "Could not create category");
+        return true;
+      }
+      catalog.categories.push(created.category);
+      const saved = await saveCatalog(
+        catalog,
+        `telegram: add category ${created.category.slug} by ${actor}`
+      );
+      clearSession(chatId);
+      if (!saved.ok) {
+        await sendMessage(chatId, `Failed to save: ${saved.error}`);
+        return true;
+      }
+      await sendMessage(
+        chatId,
+        `Added category <b>${created.category.name}</b>\n\nWhich product should be tagged to it?`,
+        buildTagProductPicker(catalog)
+      );
+      return true;
+    }
+  }
+
+  // ——— Category image ———
+  if (draft.flow === "cat_img" && draft.categoryId) {
+    if (draft.step === "photo") {
+      if (!message.photo?.length) {
+        await sendMessage(chatId, "Send a <b>photo</b> for this category.");
+        return true;
+      }
+      const largest = message.photo[message.photo.length - 1];
+      const catalog = await loadCatalog();
+      const idx = catalog.categories.findIndex((c) => c.id === draft.categoryId);
+      if (idx === -1) {
+        clearSession(chatId);
+        await sendMessage(chatId, "Category not found.");
+        return true;
+      }
+      const cat = catalog.categories[idx];
+      const hosted = await hostTelegramPhoto(largest.file_id, cat.slug);
+      if (hosted.error || !hosted.url) {
+        await sendMessage(
+          chatId,
+          `Could not host photo: ${hosted.error || "unknown error"}`
+        );
+        return true;
+      }
+      const applied = applyCategoryUpdate(catalog, idx, { image: hosted.url });
+      if (applied.error) {
+        clearSession(chatId);
+        await sendMessage(chatId, applied.error);
+        return true;
+      }
+      const saved = await saveCatalog(
+        catalog,
+        `telegram: update category ${cat.slug} by ${actor}`
+      );
+      clearSession(chatId);
+      if (!saved.ok) {
+        await sendMessage(chatId, `Failed to save: ${saved.error}`);
+        return true;
+      }
+      await sendMessage(
+        chatId,
+        `Updated image for <b>${cat.name}</b>\n\nWhich product should be tagged to this category?`,
+        buildTagProductPicker(catalog)
+      );
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function removeProductById(
@@ -803,7 +1299,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true });
       }
 
-      if (data === "pinnavskip" || data === "navcancel" || data === "prodcatskip") {
+      if (data === "pinnavskip" || data === "navcancel" || data === "prodcatskip" || data === "sess:cancel") {
+        clearSession(chatId);
         await answerCallback(cb.id, "OK");
         await editMessage(
           chatId,
@@ -812,31 +1309,382 @@ export async function POST(req: Request) {
             ? "Kept current collection."
             : data === "pinnavskip"
               ? "Skipped top-nav pin."
-              : "Closed."
+              : "Cancelled."
+        );
+        await sendMessage(chatId, "Main menu:", mainMenuInline());
+        return NextResponse.json({ ok: true });
+      }
+
+      // ——— 4 global menu hubs ———
+      if (data === "menu:main") {
+        clearSession(chatId);
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          helpText(),
+          mainMenuInline()
         );
         return NextResponse.json({ ok: true });
       }
 
-      if (data === "navrefresh") {
+      if (data === "menu:products") {
+        clearSession(chatId);
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          productsHubText(),
+          buildProductsHubKeyboard()
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "menu:cats") {
+        clearSession(chatId);
         const catalog = await loadCatalog();
         await answerCallback(cb.id);
         await editMessage(
           chatId,
           messageId,
-          listTopNav(catalog),
+          `${categoriesHubText()}\n\n${listCategories(catalog)}`,
+          buildCategoriesHubKeyboard()
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "menu:nav" || data === "navrefresh") {
+        clearSession(chatId);
+        const catalog = await loadCatalog();
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          topNavHubText(catalog),
+          buildTopNavHubKeyboard()
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "menu:home" || data === "homehub") {
+        clearSession(chatId);
+        const catalog = await loadCatalog();
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          homepageHubText(catalog),
+          buildHomepageHubKeyboard(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      // Products submenu
+      if (data === "prod:add") {
+        setSession(chatId, {
+          flow: "prod_add",
+          step: "name",
+          fields: {},
+          updatedAt: Date.now(),
+        });
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `<b>Add product</b>\nStep 1/3 — send the <b>product name</b>.\n\n/cancel to abort.`,
+          {
+            inline_keyboard: [
+              [{ text: "Cancel", callback_data: "sess:cancel" }],
+            ],
+          }
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "prod:edit") {
+        const catalog = await loadCatalog();
+        if (!catalog.products.length) {
+          await answerCallback(cb.id, "Empty");
+          await editMessage(
+            chatId,
+            messageId,
+            "No products yet. Add one first.",
+            buildProductsHubKeyboard()
+          );
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          "Pick a product to edit (name, price, photo):",
+          buildProductEditPicker(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "prod:rm") {
+        const catalog = await loadCatalog();
+        if (!catalog.products.length) {
+          await answerCallback(cb.id, "Empty");
+          await editMessage(
+            chatId,
+            messageId,
+            "No products to delete.",
+            buildProductsHubKeyboard()
+          );
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          "Tap a listing to delete:",
+          buildRemovePicker(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("prodpick:")) {
+        const productId = data.slice("prodpick:".length);
+        const catalog = await loadCatalog();
+        const product = catalog.products.find((p) => p.id === productId);
+        if (!product) {
+          await answerCallback(cb.id, "Not found");
+          return NextResponse.json({ ok: true });
+        }
+        setSession(chatId, {
+          flow: "prod_edit",
+          step: "name",
+          productId,
+          fields: {},
+          updatedAt: Date.now(),
+        });
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `<b>Edit</b> ${product.title}\nStep 1/3 — send the new <b>name</b> (or <code>-</code> to keep).\n\n/cancel to abort.`,
+          {
+            inline_keyboard: [
+              [{ text: "Cancel", callback_data: "sess:cancel" }],
+            ],
+          }
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      // Categories submenu
+      if (data === "cat:add" || data === "navmanage:add") {
+        setSession(chatId, {
+          flow: "cat_add",
+          step: "name",
+          fields: {},
+          updatedAt: Date.now(),
+        });
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `<b>Add category</b>\nStep 1/2 — send the <b>category name</b>.\nThen send a photo.\nThen pick which product to tag.\n\n/cancel to abort.`,
+          {
+            inline_keyboard: [
+              [{ text: "Cancel", callback_data: "sess:cancel" }],
+            ],
+          }
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "cat:rm" || data === "navmanage:remove") {
+        const catalog = await loadCatalog();
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          "Tap a category to remove (must have 0 products):",
+          buildCategoryRemovePicker(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "cat:img" || data === "navmanage:edit") {
+        const catalog = await loadCatalog();
+        await answerCallback(cb.id);
+        const rows: InlineButton[][] = catalog.categories.slice(0, 30).map((c) => [
+          {
+            text: truncateLabel(c.name),
+            callback_data: `catimg:${c.id}`,
+          },
+        ]);
+        rows.push([{ text: "« Back", callback_data: "menu:cats" }]);
+        await editMessage(
+          chatId,
+          messageId,
+          "Pick a category to set its image:",
+          { inline_keyboard: rows }
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("catimg:")) {
+        const categoryId = data.slice("catimg:".length);
+        const catalog = await loadCatalog();
+        const cat = catalog.categories.find((c) => c.id === categoryId);
+        if (!cat) {
+          await answerCallback(cb.id, "Not found");
+          return NextResponse.json({ ok: true });
+        }
+        setSession(chatId, {
+          flow: "cat_img",
+          step: "photo",
+          categoryId,
+          fields: {},
+          updatedAt: Date.now(),
+        });
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `<b>${cat.name}</b>\nSend a <b>photo</b> for this category.\nThen you'll pick which product to tag.\n\n/cancel to abort.`,
+          {
+            inline_keyboard: [
+              [{ text: "Cancel", callback_data: "sess:cancel" }],
+            ],
+          }
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "cat:tag") {
+        const catalog = await loadCatalog();
+        if (!catalog.products.length) {
+          await answerCallback(cb.id, "Empty");
+          await editMessage(
+            chatId,
+            messageId,
+            "No products to tag.",
+            buildCategoriesHubKeyboard()
+          );
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          "Which product should be tagged to a category?",
+          buildTagProductPicker(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("tagprod:")) {
+        const productId = data.slice("tagprod:".length);
+        const catalog = await loadCatalog();
+        const product = catalog.products.find((p) => p.id === productId);
+        if (!product) {
+          await answerCallback(cb.id, "Not found");
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `Tag <b>${product.title}</b> — pick a category:`,
+          buildCollectionPicker(productId, catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      // Top nav submenu
+      if (data === "nav:edit") {
+        const catalog = await loadCatalog();
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          "Pick a top-nav slot to attach an item:",
           buildNavHubKeyboard(catalog)
         );
         return NextResponse.json({ ok: true });
       }
 
-      if (data === "homehub") {
+      if (data === "nav:clear") {
         const catalog = await loadCatalog();
         await answerCallback(cb.id);
         await editMessage(
           chatId,
           messageId,
-          listHomeSections(catalog),
-          buildHomeHubKeyboard(catalog)
+          "Pick a slot to remove (reset to Shop):",
+          buildNavClearPicker(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("navclear:")) {
+        const slotIndex = Number(data.slice("navclear:".length));
+        const catalog = await loadCatalog();
+        const applied = setTopNavSlot(catalog, slotIndex, {
+          type: "shop",
+          label: "Shop",
+        });
+        if (applied.error) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, applied.error);
+          return NextResponse.json({ ok: true });
+        }
+        const saved = await saveCatalog(
+          catalog,
+          `telegram: clear nav slot ${slotIndex + 1} by ${cb.from?.username || fromId}`
+        );
+        if (!saved.ok) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, `Failed to save: ${saved.error}`);
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id, "Cleared");
+        await editMessage(
+          chatId,
+          messageId,
+          topNavHubText(catalog),
+          buildTopNavHubKeyboard()
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      // Homepage add / remove / edit pickers
+      if (data === "home:add") {
+        const catalog = await loadCatalog();
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          "Add (show) a section — then attach products:",
+          buildHomeActionPicker("add", catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "home:rm") {
+        const catalog = await loadCatalog();
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          "Remove (hide) a section:",
+          buildHomeActionPicker("rm", catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "home:edit") {
+        const catalog = await loadCatalog();
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          "Edit which products are attached to a section:",
+          buildHomeActionPicker("edit", catalog)
         );
         return NextResponse.json({ ok: true });
       }
@@ -873,7 +1721,7 @@ export async function POST(req: Request) {
                       callback_data: `homeitems:${short}`,
                     },
                   ],
-                  [{ text: "« Back", callback_data: "homehub" }],
+                  [{ text: "« Back", callback_data: "menu:home" }],
                 ],
               }
             : buildHomeVisibilityKeyboard(short);
@@ -921,8 +1769,8 @@ export async function POST(req: Request) {
         await editMessage(
           chatId,
           messageId,
-          listHomeSections(catalog),
-          buildHomeHubKeyboard(catalog)
+          homepageHubText(catalog),
+          buildHomepageHubKeyboard(catalog)
         );
         return NextResponse.json({ ok: true });
       }
@@ -1036,7 +1884,7 @@ export async function POST(req: Request) {
         await editMessage(
           chatId,
           messageId,
-          `${listCategories(catalog)}\n\nManage categories:`,
+          `${categoriesHubText()}\n\n${listCategories(catalog)}`,
           buildCategoriesHubKeyboard()
         );
         return NextResponse.json({ ok: true });
@@ -1281,22 +2129,94 @@ export async function POST(req: Request) {
   const [rawCommand, ...rest] = text.split(/\s+/);
   const cmd = (rawCommand || "").toLowerCase().replace(/@\w+$/i, "");
 
+  // Reply-keyboard global options (exact button labels)
+  const menuLabel = text.trim();
+
   try {
-    if (cmd === "/start" || cmd === "/help" || cmd === "/whoami" || cmd === "/id") {
-      if (cmd === "/whoami" || cmd === "/id") {
-        await sendMessage(
-          chatId,
-          `<b>Your user id:</b> <code>${fromId}</code>\n` +
-            `<b>This chat id:</b> <code>${chatId}</code>\n` +
-            `Put your user id in TELEGRAM_ADMIN_IDS (recommended).`
-        );
-        return NextResponse.json({ ok: true });
-      }
-      await sendMessage(chatId, helpText());
+    if (cmd === "/cancel") {
+      clearSession(chatId);
+      await sendMessage(chatId, "Cancelled. Back to the main menu.", mainMenuInline());
       return NextResponse.json({ ok: true });
     }
 
+    if (
+      cmd === "/start" ||
+      cmd === "/help" ||
+      cmd === "/menu" ||
+      menuLabel === "Menu"
+    ) {
+      clearSession(chatId);
+      await openMainMenu(chatId);
+      return NextResponse.json({ ok: true });
+    }
+
+    if (cmd === "/whoami" || cmd === "/id") {
+      await sendMessage(
+        chatId,
+        `<b>Your user id:</b> <code>${fromId}</code>\n` +
+          `<b>This chat id:</b> <code>${chatId}</code>\n` +
+          `Put your user id in TELEGRAM_ADMIN_IDS (recommended).`
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    // 4 global reply-keyboard buttons
+    if (menuLabel === "Products") {
+      clearSession(chatId);
+      await sendMessage(chatId, productsHubText(), buildProductsHubKeyboard());
+      return NextResponse.json({ ok: true });
+    }
+    if (menuLabel === "Categories") {
+      clearSession(chatId);
+      const catalog = await loadCatalog();
+      await sendMessage(
+        chatId,
+        `${categoriesHubText()}\n\n${listCategories(catalog)}`,
+        buildCategoriesHubKeyboard()
+      );
+      return NextResponse.json({ ok: true });
+    }
+    if (menuLabel === "Top Nav") {
+      clearSession(chatId);
+      const catalog = await loadCatalog();
+      await sendMessage(
+        chatId,
+        topNavHubText(catalog),
+        buildTopNavHubKeyboard()
+      );
+      return NextResponse.json({ ok: true });
+    }
+    if (menuLabel === "Homepage") {
+      clearSession(chatId);
+      const catalog = await loadCatalog();
+      await sendMessage(
+        chatId,
+        homepageHubText(catalog),
+        buildHomepageHubKeyboard(catalog)
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    // Guided multi-step sessions (name → price → photo, etc.)
+    const draft = getSession(chatId);
+    if (draft) {
+      const handled = await handleSessionMessage(
+        chatId,
+        fromId,
+        message,
+        draft,
+        text
+      );
+      if (handled) return NextResponse.json({ ok: true });
+    }
+
     const catalog = await loadCatalog();
+
+    if (cmd === "/start" || cmd === "/help" || cmd === "/whoami" || cmd === "/id") {
+      // unreachable — handled above; keep for safety
+      await openMainMenu(chatId);
+      return NextResponse.json({ ok: true });
+    }
 
     if (cmd === "/list") {
       await sendMessage(chatId, listProducts(catalog));
@@ -1306,7 +2226,7 @@ export async function POST(req: Request) {
     if (cmd === "/categories") {
       await sendMessage(
         chatId,
-        `${listCategories(catalog)}\n\nManage categories:`,
+        `${categoriesHubText()}\n\n${listCategories(catalog)}`,
         buildCategoriesHubKeyboard()
       );
       return NextResponse.json({ ok: true });
@@ -1467,8 +2387,8 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
     if (cmd === "/nav" || cmd === "/topnav") {
       await sendMessage(
         chatId,
-        listTopNav(catalog),
-        buildNavHubKeyboard(catalog)
+        topNavHubText(catalog),
+        buildTopNavHubKeyboard()
       );
       return NextResponse.json({ ok: true });
     }
@@ -1476,8 +2396,8 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
     if (cmd === "/home" || cmd === "/homepage" || cmd === "/sections") {
       await sendMessage(
         chatId,
-        listHomeSections(catalog),
-        buildHomeHubKeyboard(catalog)
+        homepageHubText(catalog),
+        buildHomepageHubKeyboard(catalog)
       );
       return NextResponse.json({ ok: true });
     }

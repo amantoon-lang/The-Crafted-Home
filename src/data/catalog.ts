@@ -729,6 +729,36 @@ export function createProductFromFields(
   return { product };
 }
 
+/** Update name / price / cover photo on an existing product. */
+export function applyProductUpdate(
+  data: CatalogData,
+  index: number,
+  fields: { title?: string; price?: string | number; image?: string }
+): { error?: string } {
+  const product = data.products[index];
+  if (!product) return { error: "Product not found" };
+
+  if (fields.title?.trim()) {
+    product.title = fields.title.trim();
+    product.description = product.description || product.title;
+  }
+  if (fields.price !== undefined && fields.price !== "") {
+    const price = Number(fields.price);
+    if (!Number.isFinite(price) || price <= 0) {
+      return { error: "price must be a positive number (INR)" };
+    }
+    product.price = Math.round(price);
+  }
+  if (fields.image?.trim()) {
+    const url = fields.image.trim();
+    product.images = [url, ...product.images.filter((u) => u !== url)].slice(
+      0,
+      MAX_PRODUCT_IMAGES
+    );
+  }
+  return {};
+}
+
 export function parseKeyValueMessage(text: string): Record<string, string> {
   const fields: Record<string, string> = {};
   for (const line of text.split("\n")) {
