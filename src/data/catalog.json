@@ -45,6 +45,34 @@
   ],
   "products": [
     {
+      "id": "prod-mtefhv70",
+      "title": "wooden mirror artwork Pooja thali",
+      "slug": "wooden-mirror-artwork-pooja-thali",
+      "description": "Handmade thali",
+      "story": "",
+      "price": 800,
+      "discount": 0,
+      "images": [
+        "https://raw.githubusercontent.com/amantoon-lang/The-Crafted-Home/main/public/catalog-images/wooden-mirror-artwork-pooja-thali-1788010851237.jpg"
+      ],
+      "stock": 12,
+      "artisan": "Priya",
+      "materials": "Handmade",
+      "dimensions": "",
+      "rating": 5,
+      "reviewCount": 0,
+      "featured": false,
+      "trending": false,
+      "bestSeller": false,
+      "categoryId": "cat-wooden",
+      "category": {
+        "name": "Wooden Decor",
+        "slug": "wooden-decor"
+      },
+      "createdAt": "2026-08-29T13:40:52.140Z",
+      "reviews": []
+    },
+    {
       "id": "prod-mtefbzhd",
       "title": "Two holy cows",
       "slug": "two-holy-cows",
