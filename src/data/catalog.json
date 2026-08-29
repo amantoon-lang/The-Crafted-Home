@@ -224,7 +224,7 @@
       "itemIds": []
     },
     "featured": {
-      "visible": true,
+      "visible": false,
       "itemIds": []
     },
     "trending": {
