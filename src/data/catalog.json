@@ -19,12 +19,6 @@
       "image": "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=800&q=80"
     },
     {
-      "id": "cat-candles",
-      "name": "Candles",
-      "slug": "candles",
-      "image": "https://images.unsplash.com/photo-1603006905004-abd84d2429d2?w=800&q=80"
-    },
-    {
       "id": "cat-kitchen",
       "name": "Kitchen Decor",
       "slug": "kitchen-decor",
