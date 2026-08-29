@@ -117,8 +117,9 @@
       "type": "shop"
     },
     {
-      "label": "Bestsellers",
-      "type": "bestsellers"
+      "type": "category",
+      "categorySlug": "jewellery",
+      "label": "Jewellery"
     },
     {
       "type": "category",
