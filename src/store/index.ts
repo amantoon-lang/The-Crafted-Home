@@ -140,7 +140,7 @@ const emptyCheckout = {
   shippingCity: "",
   shippingState: "",
   shippingZip: "",
-  shippingCountry: "US",
+  shippingCountry: "IN",
   deliveryInstructions: "",
   couponCode: "",
 };

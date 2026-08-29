@@ -36,6 +36,9 @@ export const checkoutSchema = z.object({
   shippingCountry: z.string().min(2, "Country is required"),
   deliveryInstructions: z.string().optional(),
   couponCode: z.string().optional(),
+  latitude: z.number().min(-90).max(90).optional().nullable(),
+  longitude: z.number().min(-180).max(180).optional().nullable(),
+  locationLabel: z.string().optional().nullable(),
 });
 
 export const reviewSchema = z.object({
