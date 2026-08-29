@@ -45,6 +45,34 @@
   ],
   "products": [
     {
+      "id": "prod-mtefbzhd",
+      "title": "Two holy cows",
+      "slug": "two-holy-cows",
+      "description": "Handmade holy cows",
+      "story": "",
+      "price": 599,
+      "discount": 0,
+      "images": [
+        "https://raw.githubusercontent.com/amantoon-lang/The-Crafted-Home/main/public/catalog-images/two-holy-cows-1788010576870.jpg"
+      ],
+      "stock": 12,
+      "artisan": "Jia",
+      "materials": "Handmade",
+      "dimensions": "",
+      "rating": 5,
+      "reviewCount": 0,
+      "featured": false,
+      "trending": false,
+      "bestSeller": false,
+      "categoryId": "cat-wooden",
+      "category": {
+        "name": "Wooden Decor",
+        "slug": "wooden-decor"
+      },
+      "createdAt": "2026-08-29T13:36:17.761Z",
+      "reviews": []
+    },
+    {
       "id": "prod-mteed2y6",
       "title": "Holy cow handmade",
       "slug": "holy-cow-handmade",
