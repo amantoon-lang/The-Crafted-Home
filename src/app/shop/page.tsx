@@ -27,7 +27,7 @@ function ShopContent() {
   const sort = searchParams.get("sort") || "newest";
   const page = Number(searchParams.get("page") || "1");
   const [search, setSearch] = useState(q);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 200]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 15000]);
   const [suggestions, setSuggestions] = useState<
     { id: string; title: string; slug: string }[]
   >([]);
@@ -160,12 +160,13 @@ function ShopContent() {
 
           <div className="space-y-4">
             <Label>
-              Price · ${priceRange[0]} – ${priceRange[1]}
+              Price · ₹{priceRange[0].toLocaleString("en-IN")} – ₹
+              {priceRange[1].toLocaleString("en-IN")}
             </Label>
             <Slider
               min={0}
-              max={200}
-              step={5}
+              max={15000}
+              step={100}
               value={priceRange}
               onValueChange={(v) => setPriceRange(v as [number, number])}
               onValueCommit={(v) => {

@@ -1,19 +1,7 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { loadCatalog, getCatalogCategories } from "@/data/catalog";
 
 export async function GET() {
-  const categories = await prisma.category.findMany({
-    orderBy: { name: "asc" },
-    include: { _count: { select: { products: true } } },
-  });
-
-  return NextResponse.json({
-    categories: categories.map((c) => ({
-      id: c.id,
-      name: c.name,
-      slug: c.slug,
-      image: c.image,
-      productCount: c._count.products,
-    })),
-  });
+  const catalog = await loadCatalog();
+  return NextResponse.json({ categories: getCatalogCategories(catalog) });
 }

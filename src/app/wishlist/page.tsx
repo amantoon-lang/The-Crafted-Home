@@ -1,53 +1,45 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { useMemo } from "react";
 import { ProductGrid } from "@/components/products/product-grid";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useWishlistStore } from "@/store";
+import { catalogProducts } from "@/data/catalog";
 
 export default function WishlistPage() {
-  const { status } = useSession();
-  const router = useRouter();
-  const setIds = useWishlistStore((s) => s.setIds);
+  const ids = useWishlistStore((s) => s.ids);
 
-  useEffect(() => {
-    if (status === "unauthenticated") router.push("/login?callbackUrl=/wishlist");
-  }, [status, router]);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["wishlist"],
-    queryFn: async () => {
-      const res = await fetch("/api/wishlist");
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
-    enabled: status === "authenticated",
-  });
-
-  useEffect(() => {
-    if (data?.ids) setIds(data.ids);
-  }, [data, setIds]);
-
-  if (status === "loading" || isLoading) {
-    return (
-      <div className="mx-auto max-w-7xl px-4 py-12">
-        <Skeleton className="h-10 w-48" />
-      </div>
-    );
-  }
+  const items = useMemo(
+    () =>
+      catalogProducts
+        .filter((p) => ids.includes(p.id))
+        .map((p) => ({
+          id: p.id,
+          title: p.title,
+          slug: p.slug,
+          price: p.price,
+          discount: p.discount,
+          images: p.images,
+          artisan: p.artisan,
+          rating: p.rating,
+          reviewCount: p.reviewCount,
+          stock: p.stock,
+          category: p.category,
+          featured: p.featured,
+          trending: p.trending,
+          bestSeller: p.bestSeller,
+        })),
+    [ids]
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <h1 className="font-display text-4xl">Wishlist</h1>
       <p className="mt-2 text-muted-foreground">Pieces you&apos;ve saved for later.</p>
       <div className="mt-10">
-        {data?.items?.length ? (
-          <ProductGrid products={data.items} />
+        {items.length ? (
+          <ProductGrid products={items} />
         ) : (
           <div className="rounded-2xl border border-dashed border-border py-16 text-center">
             <p className="text-muted-foreground">Your wishlist is empty.</p>

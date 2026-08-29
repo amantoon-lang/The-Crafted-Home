@@ -2,7 +2,7 @@ import type { NextAuthConfig } from "next-auth";
 
 /**
  * Edge-compatible Auth.js config (no Prisma / bcrypt).
- * Used by middleware; full providers live in auth.ts.
+ * Browse/shop/cart/wishlist stay public — only account areas require login.
  */
 export const authConfig = {
   pages: {
@@ -15,14 +15,14 @@ export const authConfig = {
       const { pathname } = request.nextUrl;
       const isLoggedIn = Boolean(auth?.user);
 
-      const protectedPaths = ["/checkout", "/orders", "/wishlist", "/profile", "/admin"];
-      const isProtected = protectedPaths.some(
-        (path) => pathname === path || pathname.startsWith(`${path}/`)
-      );
-
       if (pathname.startsWith("/admin")) {
         return isLoggedIn && auth?.user?.role === "ADMIN";
       }
+
+      const protectedPaths = ["/orders", "/profile"];
+      const isProtected = protectedPaths.some(
+        (path) => pathname === path || pathname.startsWith(`${path}/`)
+      );
 
       if (isProtected) return isLoggedIn;
       return true;
