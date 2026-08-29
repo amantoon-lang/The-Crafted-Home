@@ -3,6 +3,10 @@ import {
   loadCatalog,
   saveCatalog,
   createProductFromFields,
+  createCategoryFromFields,
+  applyCategoryUpdate,
+  findCategoryIndex,
+  moveCategory,
   parseKeyValueMessage,
   uploadCatalogImage,
   type CatalogData,
@@ -20,7 +24,19 @@ type TelegramUpdate = {
     from?: { id: number; username?: string; first_name?: string };
     photo?: { file_id: string; file_unique_id: string }[];
   };
+  callback_query?: {
+    id: string;
+    data?: string;
+    from?: { id: number; username?: string; first_name?: string };
+    message?: {
+      message_id: number;
+      chat: { id: number; type: string };
+      text?: string;
+    };
+  };
 };
+
+type InlineButton = { text: string; callback_data: string };
 
 function adminIds(): Set<string> {
   return new Set(
@@ -66,7 +82,11 @@ function botToken() {
   return process.env.TELEGRAM_BOT_TOKEN || "";
 }
 
-async function sendMessage(chatId: number, text: string) {
+async function sendMessage(
+  chatId: number,
+  text: string,
+  replyMarkup?: { inline_keyboard: InlineButton[][] }
+) {
   const token = botToken();
   if (!token) return;
   await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -77,8 +97,88 @@ async function sendMessage(chatId: number, text: string) {
       text,
       parse_mode: "HTML",
       disable_web_page_preview: true,
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
     }),
   });
+}
+
+async function answerCallback(callbackQueryId: string, text?: string) {
+  const token = botToken();
+  if (!token) return;
+  await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      callback_query_id: callbackQueryId,
+      text,
+      show_alert: false,
+    }),
+  });
+}
+
+async function editMessage(
+  chatId: number,
+  messageId: number,
+  text: string,
+  replyMarkup?: { inline_keyboard: InlineButton[][] }
+) {
+  const token = botToken();
+  if (!token) return;
+  await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId,
+      text,
+      parse_mode: "HTML",
+      disable_web_page_preview: true,
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
+    }),
+  });
+}
+
+function truncateLabel(text: string, max = 56) {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= max) return clean;
+  return `${clean.slice(0, max - 1)}…`;
+}
+
+function buildRemovePicker(catalog: CatalogData) {
+  const products = catalog.products.slice(0, 40);
+  const inline_keyboard: InlineButton[][] = products.map((p) => [
+    {
+      text: truncateLabel(`${p.title} · ${formatCurrency(p.price)}`),
+      callback_data: `rmpick:${p.id}`,
+    },
+  ]);
+  inline_keyboard.push([{ text: "Cancel", callback_data: "rmno" }]);
+  return { inline_keyboard };
+}
+
+function buildCategoryRemovePicker(catalog: CatalogData) {
+  const cats = catalog.categories.slice(0, 40);
+  const inline_keyboard: InlineButton[][] = cats.map((c, i) => [
+    {
+      text: truncateLabel(`${i + 1}. ${c.name}`),
+      callback_data: `catrmpick:${c.id}`,
+    },
+  ]);
+  inline_keyboard.push([{ text: "Cancel", callback_data: "catrmno" }]);
+  return { inline_keyboard };
+}
+
+function listCategories(data: CatalogData) {
+  if (!data.categories.length) return "No categories yet. Send /addcategory to create one.";
+  return (
+    `<b>Categories</b> (order = homepage + top nav)\n\n` +
+    data.categories
+      .map((c, i) => {
+        const count = data.products.filter((p) => p.categoryId === c.id).length;
+        return `${i + 1}. <b>${c.name}</b>\n   <code>${c.slug}</code> · ${count} products`;
+      })
+      .join("\n\n")
+  );
 }
 
 /** Download a Telegram photo and re-host it in the repo (never store bot-token URLs). */
@@ -116,27 +216,31 @@ function helpText() {
 
 Prices are in <b>INR (₹)</b>.
 
-<b>Commands</b>
+<b>Products</b>
 /list — list products
 /get &lt;slug&gt; — product details
 /price &lt;slug&gt; &lt;amount&gt; — set price in ₹
 /stock &lt;slug&gt; &lt;qty&gt; — set stock
 /discount &lt;slug&gt; &lt;percent&gt; — set discount %
-/image &lt;slug&gt; &lt;url&gt; — set main image URL
-/delete &lt;slug&gt; — remove product
-/categories — list category slugs
-/add — add product (send as multi-line message):
+/image &lt;slug&gt; — send photo with this caption, or /image &lt;slug&gt; &lt;url&gt;
+/remove — tappable list to delete a listing (alias: /delete)
+/add — add product (multi-line or photo + caption)
 
-<code>/add
-title: Blue Ceramic Vase
-price: 2499
-category: ceramics
-artisan: Priya
-stock: 12
-description: Handmade vase
+<b>Categories</b> (homepage + top nav order)
+/categories — list categories in site order
+/addcategory — add a category (see /help)
+/setcategory &lt;slug&gt; — rename / change image
+/movecategory &lt;slug&gt; &lt;position&gt; — set order (1 = top)
+/rmcategory — tappable list to remove a category
+
+<code>/addcategory
+name: Textiles
+slug: textiles
 image: https://...</code>
 
-Or send a <b>photo</b> with caption using the same key:value lines (include title + price).`;
+Or send a <b>photo</b> with caption:
+<code>/addcategory
+name: Textiles</code>`;
 }
 
 function listProducts(data: CatalogData) {
@@ -147,6 +251,60 @@ function listProducts(data: CatalogData) {
         `${i + 1}. <b>${p.title}</b>\n   ${formatCurrency(p.price)} · stock ${p.stock}\n   <code>${p.slug}</code>`
     )
     .join("\n\n");
+}
+
+function findProductIndex(data: CatalogData, query: string): number {
+  const q = query.trim().toLowerCase();
+  if (!q) return -1;
+  const bySlug = data.products.findIndex((p) => p.slug.toLowerCase() === q);
+  if (bySlug !== -1) return bySlug;
+  const exactTitle = data.products.findIndex((p) => p.title.toLowerCase() === q);
+  if (exactTitle !== -1) return exactTitle;
+  return data.products.findIndex((p) => p.title.toLowerCase().includes(q));
+}
+
+async function removeProductById(
+  productId: string,
+  actor: string
+): Promise<{ ok: boolean; title?: string; slug?: string; error?: string }> {
+  const catalog = await loadCatalog();
+  const idx = catalog.products.findIndex((p) => p.id === productId);
+  if (idx === -1) return { ok: false, error: "Product not found (maybe already removed)." };
+  const removed = catalog.products[idx];
+  catalog.products.splice(idx, 1);
+  const saved = await saveCatalog(
+    catalog,
+    `telegram: remove ${removed.slug} by ${actor}`
+  );
+  if (!saved.ok) return { ok: false, error: saved.error || "Failed to save" };
+  return { ok: true, title: removed.title, slug: removed.slug };
+}
+
+async function removeCategoryById(
+  categoryId: string,
+  actor: string
+): Promise<{ ok: boolean; name?: string; slug?: string; error?: string }> {
+  const catalog = await loadCatalog();
+  const idx = catalog.categories.findIndex((c) => c.id === categoryId);
+  if (idx === -1) return { ok: false, error: "Category not found (maybe already removed)." };
+  const removed = catalog.categories[idx];
+  const inUse = catalog.products.filter((p) => p.categoryId === categoryId).length;
+  if (inUse > 0) {
+    return {
+      ok: false,
+      error: `${inUse} product(s) still use this category. Move or delete those listings first.`,
+    };
+  }
+  if (catalog.categories.length <= 1) {
+    return { ok: false, error: "Keep at least one category." };
+  }
+  catalog.categories.splice(idx, 1);
+  const saved = await saveCatalog(
+    catalog,
+    `telegram: remove category ${removed.slug} by ${actor}`
+  );
+  if (!saved.ok) return { ok: false, error: saved.error || "Failed to save" };
+  return { ok: true, name: removed.name, slug: removed.slug };
 }
 
 export async function POST(req: Request) {
@@ -167,6 +325,158 @@ export async function POST(req: Request) {
   }
 
   const update = (await req.json()) as TelegramUpdate;
+
+  // Inline button presses (delete picker)
+  if (update.callback_query) {
+    const cb = update.callback_query;
+    const chatId = cb.message?.chat.id;
+    const messageId = cb.message?.message_id;
+    const fromId = String(cb.from?.id || "");
+    const data = cb.data || "";
+
+    if (chatId == null || messageId == null) {
+      await answerCallback(cb.id);
+      return NextResponse.json({ ok: true });
+    }
+
+    if (!isAuthorized(fromId, chatId)) {
+      await answerCallback(cb.id, "Not authorized");
+      return NextResponse.json({ ok: true });
+    }
+
+    try {
+      if (data === "rmno") {
+        await answerCallback(cb.id, "Cancelled");
+        await editMessage(chatId, messageId, "Remove cancelled.");
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("rmpick:")) {
+        const productId = data.slice("rmpick:".length);
+        const catalog = await loadCatalog();
+        const product = catalog.products.find((p) => p.id === productId);
+        if (!product) {
+          await answerCallback(cb.id, "Not found");
+          await editMessage(
+            chatId,
+            messageId,
+            "That listing is gone. Send /remove again."
+          );
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `Delete <b>${product.title}</b>?\n<code>${product.slug}</code>\n${formatCurrency(product.price)}`,
+          {
+            inline_keyboard: [
+              [
+                { text: "Yes, delete", callback_data: `rmyes:${product.id}` },
+                { text: "Cancel", callback_data: "rmno" },
+              ],
+            ],
+          }
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("rmyes:")) {
+        const productId = data.slice("rmyes:".length);
+        const result = await removeProductById(
+          productId,
+          cb.from?.username || fromId
+        );
+        if (!result.ok) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(
+            chatId,
+            messageId,
+            `Could not remove listing: ${result.error}`
+          );
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id, "Deleted");
+        await editMessage(
+          chatId,
+          messageId,
+          `Removed <b>${result.title}</b>\n<code>${result.slug}</code>`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data === "catrmno") {
+        await answerCallback(cb.id, "Cancelled");
+        await editMessage(chatId, messageId, "Category remove cancelled.");
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("catrmpick:")) {
+        const categoryId = data.slice("catrmpick:".length);
+        const catalog = await loadCatalog();
+        const category = catalog.categories.find((c) => c.id === categoryId);
+        if (!category) {
+          await answerCallback(cb.id, "Not found");
+          await editMessage(
+            chatId,
+            messageId,
+            "That category is gone. Send /rmcategory again."
+          );
+          return NextResponse.json({ ok: true });
+        }
+        const count = catalog.products.filter(
+          (p) => p.categoryId === categoryId
+        ).length;
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `Delete category <b>${category.name}</b>?\n<code>${category.slug}</code>\n${count} product(s) assigned` +
+            (count > 0 ? "\n(must be 0 to delete)" : ""),
+          {
+            inline_keyboard: [
+              [
+                { text: "Yes, delete", callback_data: `catrmyes:${category.id}` },
+                { text: "Cancel", callback_data: "catrmno" },
+              ],
+            ],
+          }
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("catrmyes:")) {
+        const categoryId = data.slice("catrmyes:".length);
+        const result = await removeCategoryById(
+          categoryId,
+          cb.from?.username || fromId
+        );
+        if (!result.ok) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(
+            chatId,
+            messageId,
+            `Could not remove category: ${result.error}`
+          );
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id, "Deleted");
+        await editMessage(
+          chatId,
+          messageId,
+          `Removed category <b>${result.name}</b>\n<code>${result.slug}</code>`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      await answerCallback(cb.id);
+    } catch (e) {
+      console.error(e);
+      await answerCallback(cb.id, "Error");
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   const message = update.message;
   if (!message) return NextResponse.json({ ok: true });
 
@@ -215,10 +525,201 @@ export async function POST(req: Request) {
     }
 
     if (cmd === "/categories") {
-      const lines = catalog.categories
-        .map((c) => `• <b>${c.name}</b> — <code>${c.slug}</code>`)
-        .join("\n");
-      await sendMessage(chatId, lines || "No categories.");
+      await sendMessage(chatId, listCategories(catalog));
+      return NextResponse.json({ ok: true });
+    }
+
+    if (
+      cmd === "/addcategory" ||
+      cmd === "/addcat" ||
+      cmd === "/newcategory"
+    ) {
+      let body = text.replace(/^\/(?:addcategory|addcat|newcategory)(?:@\w+)?\s*/i, "");
+      const fields = parseKeyValueMessage(body);
+
+      if (message.photo?.length && !fields.image) {
+        const largest = message.photo[message.photo.length - 1];
+        const hosted = await hostTelegramPhoto(
+          largest.file_id,
+          (fields.name || "category").toLowerCase().replace(/\s+/g, "-").slice(0, 40)
+        );
+        if (hosted.error || !hosted.url) {
+          await sendMessage(
+            chatId,
+            `Photo received but could not host image: ${hosted.error || "unknown error"}`
+          );
+          return NextResponse.json({ ok: true });
+        }
+        fields.image = hosted.url;
+      }
+
+      const created = createCategoryFromFields(catalog, fields);
+      if (created.error || !created.category) {
+        await sendMessage(
+          chatId,
+          `${created.error || "Could not create category"}\n\n<code>/addcategory
+name: Textiles
+slug: textiles
+image: https://...</code>\n\nOr send a photo with that caption.`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      catalog.categories.push(created.category);
+      const saved = await saveCatalog(
+        catalog,
+        `telegram: add category ${created.category.slug} by ${message.from?.username || fromId}`
+      );
+      if (!saved.ok) {
+        await sendMessage(chatId, `Failed to save: ${saved.error}`);
+        return NextResponse.json({ ok: true });
+      }
+      await sendMessage(
+        chatId,
+        `Added category <b>${created.category.name}</b>\n<code>${created.category.slug}</code>\nPosition ${catalog.categories.length} (use /movecategory to change order)`
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    if (cmd === "/setcategory" || cmd === "/cat" || cmd === "/editcategory") {
+      const query = rest[0] || "";
+      const idx = findCategoryIndex(catalog, query);
+      if (idx === -1) {
+        await sendMessage(
+          chatId,
+          `Category not found: <code>${query || "?"}</code>\nSend /categories to list.`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      let body = text
+        .replace(/^\/(?:setcategory|cat|editcategory)(?:@\w+)?\s+\S+\s*/i, "")
+        .trim();
+      const fields = parseKeyValueMessage(body);
+
+      if (message.photo?.length) {
+        const largest = message.photo[message.photo.length - 1];
+        const hosted = await hostTelegramPhoto(
+          largest.file_id,
+          catalog.categories[idx].slug
+        );
+        if (hosted.error || !hosted.url) {
+          await sendMessage(
+            chatId,
+            `Photo received but could not host image: ${hosted.error || "unknown error"}`
+          );
+          return NextResponse.json({ ok: true });
+        }
+        fields.image = hosted.url;
+      }
+
+      if (!fields.name && !fields.slug && !fields.image) {
+        await sendMessage(
+          chatId,
+          `Update <b>${catalog.categories[idx].name}</b> with:\n<code>/setcategory ${catalog.categories[idx].slug}
+name: New Name
+image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${catalog.categories[idx].slug}</code>`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      const applied = applyCategoryUpdate(catalog, idx, fields);
+      if (applied.error) {
+        await sendMessage(chatId, applied.error);
+        return NextResponse.json({ ok: true });
+      }
+
+      const saved = await saveCatalog(
+        catalog,
+        `telegram: update category ${catalog.categories[idx].slug} by ${message.from?.username || fromId}`
+      );
+      if (!saved.ok) {
+        await sendMessage(chatId, `Failed to save: ${saved.error}`);
+        return NextResponse.json({ ok: true });
+      }
+      const c = catalog.categories[idx];
+      await sendMessage(
+        chatId,
+        `Updated category <b>${c.name}</b>\n<code>${c.slug}</code>\n${c.image}`
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    if (cmd === "/movecategory" || cmd === "/movecat") {
+      const query = rest[0] || "";
+      const position = Number(rest[1]);
+      const idx = findCategoryIndex(catalog, query);
+      if (idx === -1) {
+        await sendMessage(
+          chatId,
+          `Category not found: <code>${query || "?"}</code>\nUsage: <code>/movecategory textiles 1</code>`
+        );
+        return NextResponse.json({ ok: true });
+      }
+      if (!Number.isFinite(position) || position < 1) {
+        await sendMessage(
+          chatId,
+          `Usage: <code>/movecategory ${catalog.categories[idx].slug} 1</code>\n1 = top of homepage / nav`
+        );
+        return NextResponse.json({ ok: true });
+      }
+      const moved = moveCategory(catalog, idx, position);
+      if (moved.error) {
+        await sendMessage(chatId, moved.error);
+        return NextResponse.json({ ok: true });
+      }
+      const saved = await saveCatalog(
+        catalog,
+        `telegram: move category ${catalog.categories[Math.max(0, Math.min(catalog.categories.length, Math.round(position)) - 1)]?.slug} by ${message.from?.username || fromId}`
+      );
+      if (!saved.ok) {
+        await sendMessage(chatId, `Failed to save: ${saved.error}`);
+        return NextResponse.json({ ok: true });
+      }
+      await sendMessage(chatId, listCategories(catalog));
+      return NextResponse.json({ ok: true });
+    }
+
+    if (cmd === "/rmcategory" || cmd === "/removecategory" || cmd === "/deletecategory") {
+      const query = rest.join(" ").trim();
+      if (!query) {
+        if (!catalog.categories.length) {
+          await sendMessage(chatId, "No categories to remove.");
+          return NextResponse.json({ ok: true });
+        }
+        await sendMessage(
+          chatId,
+          "Tap a category to remove it (only empty categories can be deleted):",
+          buildCategoryRemovePicker(catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      const idx = findCategoryIndex(catalog, query);
+      if (idx === -1) {
+        await sendMessage(
+          chatId,
+          `Category not found: <code>${query}</code>\nSend /rmcategory to pick from a list.`
+        );
+        return NextResponse.json({ ok: true });
+      }
+      const category = catalog.categories[idx];
+      const count = catalog.products.filter(
+        (p) => p.categoryId === category.id
+      ).length;
+      await sendMessage(
+        chatId,
+        `Delete category <b>${category.name}</b>?\n<code>${category.slug}</code>\n${count} product(s) assigned` +
+          (count > 0 ? "\n(must be 0 to delete)" : ""),
+        {
+          inline_keyboard: [
+            [
+              { text: "Yes, delete", callback_data: `catrmyes:${category.id}` },
+              { text: "Cancel", callback_data: "catrmno" },
+            ],
+          ],
+        }
+      );
       return NextResponse.json({ ok: true });
     }
 
@@ -318,23 +819,45 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    if (cmd === "/delete") {
-      const slug = rest[0];
-      const before = catalog.products.length;
-      catalog.products = catalog.products.filter((p) => p.slug !== slug);
-      if (catalog.products.length === before) {
-        await sendMessage(chatId, `Product not found: <code>${slug || "?"}</code>`);
+    if (cmd === "/delete" || cmd === "/remove") {
+      const query = rest.join(" ").trim();
+
+      // No argument → show tappable list
+      if (!query) {
+        if (!catalog.products.length) {
+          await sendMessage(chatId, "Catalog is empty — nothing to remove.");
+          return NextResponse.json({ ok: true });
+        }
+        await sendMessage(
+          chatId,
+          "Tap a listing to remove it:",
+          buildRemovePicker(catalog)
+        );
         return NextResponse.json({ ok: true });
       }
-      const saved = await saveCatalog(
-        catalog,
-        `telegram: delete ${slug} by ${message.from?.username || fromId}`
+
+      const idx = findProductIndex(catalog, query);
+      if (idx === -1) {
+        await sendMessage(
+          chatId,
+          `No listing found for <code>${query}</code>\nSend /remove to pick from a list.`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      const product = catalog.products[idx];
+      await sendMessage(
+        chatId,
+        `Delete <b>${product.title}</b>?\n<code>${product.slug}</code>\n${formatCurrency(product.price)}`,
+        {
+          inline_keyboard: [
+            [
+              { text: "Yes, delete", callback_data: `rmyes:${product.id}` },
+              { text: "Cancel", callback_data: "rmno" },
+            ],
+          ],
+        }
       );
-      if (!saved.ok) {
-        await sendMessage(chatId, `Failed to save: ${saved.error}`);
-        return NextResponse.json({ ok: true });
-      }
-      await sendMessage(chatId, `Deleted <code>${slug}</code>`);
       return NextResponse.json({ ok: true });
     }
 
