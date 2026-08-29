@@ -11,6 +11,12 @@
       "name": "Home decor",
       "slug": "home-decor",
       "image": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80"
+    },
+    {
+      "id": "cat-mtehy68x",
+      "name": "Home furnishing",
+      "slug": "home-furnishing",
+      "image": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80"
     }
   ],
   "products": [
