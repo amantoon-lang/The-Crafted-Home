@@ -17,6 +17,12 @@
       "name": "Home furnishing",
       "slug": "home-furnishing",
       "image": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80"
+    },
+    {
+      "id": "cat-mtej32qh",
+      "name": "Jewellery",
+      "slug": "jewellery",
+      "image": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80"
     }
   ],
   "products": [
