@@ -104,5 +104,25 @@
       "createdAt": "2026-08-29T13:09:09.294Z",
       "reviews": []
     }
+  ],
+  "topNav": [
+    {
+      "label": "Shop",
+      "type": "shop"
+    },
+    {
+      "label": "Bestsellers",
+      "type": "bestsellers"
+    },
+    {
+      "label": "Ceramics",
+      "type": "category",
+      "categorySlug": "ceramics"
+    },
+    {
+      "label": "Wood",
+      "type": "category",
+      "categorySlug": "wooden-decor"
+    }
   ]
 }

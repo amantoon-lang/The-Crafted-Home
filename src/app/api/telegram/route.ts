@@ -10,7 +10,10 @@ import {
   uploadCatalogImage,
   uploadCatalogVideo,
   MAX_PRODUCT_IMAGES,
+  ensureTopNav,
+  setTopNavSlot,
   type CatalogData,
+  type TopNavSlot,
 } from "@/data/catalog";
 import { formatCurrency } from "@/lib/utils";
 
@@ -246,8 +249,87 @@ Prices are in <b>INR (₹)</b>.
 /addcategory — add a category
 /setcategory &lt;slug&gt; — rename or change image
 /rmcategory — remove a category (tappable list)
+/nav — show the 4 top header links
+/setnav — edit a top header slot
 
-Each product can have <b>up to ${MAX_PRODUCT_IMAGES} photos</b> and <b>1 video</b>.`;
+Each product can have <b>up to ${MAX_PRODUCT_IMAGES} photos</b> and <b>1 video</b>.
+The top bar has <b>4 links</b> you control with /nav.`;
+}
+
+function describeNavSlot(slot: TopNavSlot, i: number) {
+  if (slot.type === "shop") return `${i + 1}. <b>${slot.label}</b> — Shop all`;
+  if (slot.type === "bestsellers") {
+    return `${i + 1}. <b>${slot.label}</b> — Bestsellers`;
+  }
+  return `${i + 1}. <b>${slot.label}</b> — collection <code>${slot.categorySlug}</code>`;
+}
+
+function listTopNav(data: CatalogData) {
+  const slots = ensureTopNav(data);
+  return (
+    `<b>Top header links</b> (4 slots)\n\n` +
+    slots.map((s, i) => describeNavSlot(s, i)).join("\n") +
+    `\n\nChange with <code>/setnav 3 ceramics</code> or send /setnav for buttons.`
+  );
+}
+
+function buildPinNavKeyboard(categorySlug: string) {
+  return {
+    inline_keyboard: [
+      [
+        { text: "Slot 1", callback_data: `pinnav:0:${categorySlug}` },
+        { text: "Slot 2", callback_data: `pinnav:1:${categorySlug}` },
+        { text: "Slot 3", callback_data: `pinnav:2:${categorySlug}` },
+        { text: "Slot 4", callback_data: `pinnav:3:${categorySlug}` },
+      ],
+      [{ text: "Skip", callback_data: "pinnavskip" }],
+    ],
+  };
+}
+
+function buildCollectionPicker(productId: string, catalog: CatalogData) {
+  const cats = catalog.categories.slice(0, 20);
+  const rows: InlineButton[][] = cats.map((c) => [
+    {
+      text: truncateLabel(c.name),
+      callback_data: `prodcat:${productId}:${c.id}`,
+    },
+  ]);
+  rows.push([{ text: "Keep current", callback_data: "prodcatskip" }]);
+  return { inline_keyboard: rows };
+}
+
+function buildNavSlotPicker() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "1", callback_data: "navpick:0" },
+        { text: "2", callback_data: "navpick:1" },
+        { text: "3", callback_data: "navpick:2" },
+        { text: "4", callback_data: "navpick:3" },
+      ],
+      [{ text: "Cancel", callback_data: "navcancel" }],
+    ],
+  };
+}
+
+function buildNavTypePicker(slotIndex: number, catalog: CatalogData) {
+  const rows: InlineButton[][] = [
+    [
+      { text: "Shop", callback_data: `navtype:${slotIndex}:shop` },
+      { text: "Bestsellers", callback_data: `navtype:${slotIndex}:best` },
+    ],
+  ];
+  for (const c of catalog.categories.slice(0, 24)) {
+    rows.push([
+      {
+        text: truncateLabel(`Collection: ${c.name}`),
+        callback_data: `navcat:${slotIndex}:${c.slug}`,
+      },
+    ]);
+  }
+  rows.push([{ text: "Cancel", callback_data: "navcancel" }]);
+  return { inline_keyboard: rows };
 }
 
 function mediaSummary(product: {
@@ -525,6 +607,150 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true });
       }
 
+      if (data === "pinnavskip" || data === "navcancel" || data === "prodcatskip") {
+        await answerCallback(cb.id, "OK");
+        await editMessage(
+          chatId,
+          messageId,
+          data === "prodcatskip"
+            ? "Kept current collection."
+            : data === "pinnavskip"
+              ? "Skipped top-nav pin."
+              : "Cancelled."
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("pinnav:")) {
+        const parts = data.split(":");
+        const slotIndex = Number(parts[1]);
+        const categorySlug = parts.slice(2).join(":");
+        const catalog = await loadCatalog();
+        const applied = setTopNavSlot(catalog, slotIndex, {
+          type: "category",
+          categorySlug,
+          label: "",
+        });
+        if (applied.error) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, applied.error);
+          return NextResponse.json({ ok: true });
+        }
+        const saved = await saveCatalog(
+          catalog,
+          `telegram: pin nav slot ${slotIndex + 1} → ${categorySlug} by ${cb.from?.username || fromId}`
+        );
+        if (!saved.ok) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, `Failed to save: ${saved.error}`);
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id, "Pinned");
+        await editMessage(chatId, messageId, listTopNav(catalog));
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("navpick:")) {
+        const slotIndex = Number(data.slice("navpick:".length));
+        const catalog = await loadCatalog();
+        ensureTopNav(catalog);
+        await answerCallback(cb.id);
+        await editMessage(
+          chatId,
+          messageId,
+          `Set top-nav slot <b>${slotIndex + 1}</b> to:`,
+          buildNavTypePicker(slotIndex, catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("navtype:")) {
+        const [, idxStr, kind] = data.split(":");
+        const slotIndex = Number(idxStr);
+        const catalog = await loadCatalog();
+        const applied = setTopNavSlot(catalog, slotIndex, {
+          type: kind === "best" ? "bestsellers" : "shop",
+          label: kind === "best" ? "Bestsellers" : "Shop",
+        });
+        if (applied.error) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, applied.error);
+          return NextResponse.json({ ok: true });
+        }
+        const saved = await saveCatalog(
+          catalog,
+          `telegram: set nav slot ${slotIndex + 1} by ${cb.from?.username || fromId}`
+        );
+        if (!saved.ok) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, `Failed to save: ${saved.error}`);
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id, "Updated");
+        await editMessage(chatId, messageId, listTopNav(catalog));
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("navcat:")) {
+        const parts = data.split(":");
+        const slotIndex = Number(parts[1]);
+        const categorySlug = parts.slice(2).join(":");
+        const catalog = await loadCatalog();
+        const applied = setTopNavSlot(catalog, slotIndex, {
+          type: "category",
+          categorySlug,
+        });
+        if (applied.error) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, applied.error);
+          return NextResponse.json({ ok: true });
+        }
+        const saved = await saveCatalog(
+          catalog,
+          `telegram: set nav slot ${slotIndex + 1} → ${categorySlug} by ${cb.from?.username || fromId}`
+        );
+        if (!saved.ok) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, `Failed to save: ${saved.error}`);
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id, "Updated");
+        await editMessage(chatId, messageId, listTopNav(catalog));
+        return NextResponse.json({ ok: true });
+      }
+
+      if (data.startsWith("prodcat:")) {
+        const parts = data.split(":");
+        const productId = parts[1];
+        const categoryId = parts.slice(2).join(":");
+        const catalog = await loadCatalog();
+        const product = catalog.products.find((p) => p.id === productId);
+        const category = catalog.categories.find((c) => c.id === categoryId);
+        if (!product || !category) {
+          await answerCallback(cb.id, "Not found");
+          await editMessage(chatId, messageId, "Product or collection not found.");
+          return NextResponse.json({ ok: true });
+        }
+        product.categoryId = category.id;
+        product.category = { name: category.name, slug: category.slug };
+        const saved = await saveCatalog(
+          catalog,
+          `telegram: set collection ${product.slug} → ${category.slug} by ${cb.from?.username || fromId}`
+        );
+        if (!saved.ok) {
+          await answerCallback(cb.id, "Failed");
+          await editMessage(chatId, messageId, `Failed to save: ${saved.error}`);
+          return NextResponse.json({ ok: true });
+        }
+        await answerCallback(cb.id, "Saved");
+        await editMessage(
+          chatId,
+          messageId,
+          `<b>${product.title}</b> is in collection <b>${category.name}</b>\n<code>${category.slug}</code>`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
       await answerCallback(cb.id);
     } catch (e) {
       console.error(e);
@@ -636,6 +862,12 @@ image: https://...</code>\n\nOr send a photo with that caption.`
         chatId,
         `Added category <b>${created.category.name}</b>\n<code>${created.category.slug}</code>`
       );
+      // After creating a collection (esp. with image), ask which top-nav slot
+      await sendMessage(
+        chatId,
+        `Where should <b>${created.category.name}</b> appear in the top header?\nPick a slot (or Skip):`,
+        buildPinNavKeyboard(created.category.slug)
+      );
       return NextResponse.json({ ok: true });
     }
 
@@ -701,6 +933,96 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
         chatId,
         `Updated category <b>${c.name}</b>\n<code>${c.slug}</code>`
       );
+      if (fields.image) {
+        await sendMessage(
+          chatId,
+          `Where should <b>${c.name}</b> appear in the top header?\nPick a slot (or Skip):`,
+          buildPinNavKeyboard(c.slug)
+        );
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    if (cmd === "/nav" || cmd === "/topnav") {
+      await sendMessage(chatId, listTopNav(catalog));
+      return NextResponse.json({ ok: true });
+    }
+
+    if (cmd === "/setnav") {
+      // /setnav → button picker
+      // /setnav 3 ceramics
+      // /setnav 3 Wood wooden-decor
+      // /setnav 1 shop
+      // /setnav 2 bestsellers
+      if (!rest.length) {
+        await sendMessage(
+          chatId,
+          `${listTopNav(catalog)}\n\nTap a slot to change:`,
+          buildNavSlotPicker()
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      const slotNum = Number(rest[0]);
+      if (!Number.isFinite(slotNum) || slotNum < 1 || slotNum > 4) {
+        await sendMessage(
+          chatId,
+          "Usage:\n<code>/setnav</code> — pick with buttons\n<code>/setnav 3 ceramics</code>\n<code>/setnav 1 shop</code>\n<code>/setnav 2 bestsellers</code>"
+        );
+        return NextResponse.json({ ok: true });
+      }
+      const slotIndex = slotNum - 1;
+      const kind = (rest[1] || "").toLowerCase();
+      if (!kind) {
+        await sendMessage(
+          chatId,
+          `Set top-nav slot <b>${slotNum}</b> to:`,
+          buildNavTypePicker(slotIndex, catalog)
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      let applied: { error?: string };
+      if (kind === "shop") {
+        applied = setTopNavSlot(catalog, slotIndex, {
+          type: "shop",
+          label: rest.slice(2).join(" ") || "Shop",
+        });
+      } else if (kind === "bestsellers" || kind === "bestseller" || kind === "best") {
+        applied = setTopNavSlot(catalog, slotIndex, {
+          type: "bestsellers",
+          label: rest.slice(2).join(" ") || "Bestsellers",
+        });
+      } else {
+        // Treat as category slug; optional custom label before slug:
+        // /setnav 3 wooden-decor
+        // /setnav 3 Wood wooden-decor
+        let categorySlug = kind;
+        let label = "";
+        if (rest.length >= 3) {
+          label = rest.slice(1, -1).join(" ");
+          categorySlug = rest[rest.length - 1].toLowerCase();
+        }
+        applied = setTopNavSlot(catalog, slotIndex, {
+          type: "category",
+          categorySlug,
+          label,
+        });
+      }
+
+      if (applied.error) {
+        await sendMessage(chatId, applied.error);
+        return NextResponse.json({ ok: true });
+      }
+      const saved = await saveCatalog(
+        catalog,
+        `telegram: setnav ${slotNum} by ${message.from?.username || fromId}`
+      );
+      if (!saved.ok) {
+        await sendMessage(chatId, `Failed to save: ${saved.error}`);
+        return NextResponse.json({ ok: true });
+      }
+      await sendMessage(chatId, listTopNav(catalog));
       return NextResponse.json({ ok: true });
     }
 
@@ -1154,8 +1476,14 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
         `Added <b>${created.product.title}</b>\n${formatCurrency(created.product.price)}\n<code>${created.product.slug}</code>\n\n` +
           `Photos: ${created.product.images.length}/${MAX_PRODUCT_IMAGES}` +
           (created.product.video ? ` · Video: yes` : "") +
-          `\n\nAdd more photos (up to ${MAX_PRODUCT_IMAGES}): send each with caption\n<code>/photo ${created.product.slug}</code>\n` +
-          `Add a video: send with caption\n<code>/video ${created.product.slug}</code>`
+          `\nCollection: <b>${created.product.category?.name || "?"}</b>\n\n` +
+          `Add more photos: <code>/photo ${created.product.slug}</code>\n` +
+          `Add a video: <code>/video ${created.product.slug}</code>`
+      );
+      await sendMessage(
+        chatId,
+        `Which collection should <b>${created.product.title}</b> stay in?`,
+        buildCollectionPicker(created.product.id, catalog)
       );
       return NextResponse.json({ ok: true });
     }
