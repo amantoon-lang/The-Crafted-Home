@@ -21,6 +21,35 @@
   ],
   "products": [
     {
+      "id": "prod-mtel1uns",
+      "title": "Queen’s fame",
+      "slug": "queens-fame",
+      "description": "Queen’s fame",
+      "story": "",
+      "price": 1299,
+      "discount": 0,
+      "images": [
+        "https://raw.githubusercontent.com/amantoon-lang/The-Crafted-Home/main/public/catalog-images/queen-s-fame-1788020181383.jpg"
+      ],
+      "video": null,
+      "stock": 10,
+      "artisan": "The Crafted Home",
+      "materials": "Handmade",
+      "dimensions": "",
+      "rating": 5,
+      "reviewCount": 0,
+      "featured": false,
+      "trending": false,
+      "bestSeller": false,
+      "categoryId": "cat-wooden",
+      "category": {
+        "name": "Home Decor",
+        "slug": "wooden-decor"
+      },
+      "createdAt": "2026-08-29T16:16:22.648Z",
+      "reviews": []
+    },
+    {
       "id": "prod-mtekvy72",
       "title": "White pearled necklace",
       "slug": "white-pearled-necklace",
