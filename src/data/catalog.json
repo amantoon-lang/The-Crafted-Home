@@ -120,9 +120,9 @@
       "label": "Home furnishing"
     },
     {
-      "label": "Wood",
       "type": "category",
-      "categorySlug": "wooden-decor"
+      "categorySlug": "wooden-decor",
+      "label": "Wooden Decor"
     }
   ]
 }
