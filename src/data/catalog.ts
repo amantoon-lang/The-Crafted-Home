@@ -340,6 +340,72 @@ export function parseKeyValueMessage(text: string): Record<string, string> {
   return fields;
 }
 
+export function findCategoryIndex(data: CatalogData, query: string): number {
+  const q = query.trim().toLowerCase();
+  if (!q) return -1;
+  const bySlug = data.categories.findIndex((c) => c.slug.toLowerCase() === q);
+  if (bySlug !== -1) return bySlug;
+  const exactName = data.categories.findIndex((c) => c.name.toLowerCase() === q);
+  if (exactName !== -1) return exactName;
+  return data.categories.findIndex((c) => c.name.toLowerCase().includes(q));
+}
+
+const DEFAULT_CATEGORY_IMAGE =
+  "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80";
+
+export function createCategoryFromFields(
+  data: CatalogData,
+  fields: Record<string, string>
+): { category?: CatalogCategory; error?: string } {
+  const name = fields.name?.trim();
+  if (!name) return { error: "name is required" };
+
+  const slug = slugify(fields.slug || name);
+  if (!slug) return { error: "slug could not be derived from name" };
+  if (data.categories.some((c) => c.slug === slug)) {
+    return { error: `Category slug "${slug}" already exists` };
+  }
+
+  return {
+    category: {
+      id: `cat-${Date.now().toString(36)}`,
+      name,
+      slug,
+      image: fields.image?.trim() || DEFAULT_CATEGORY_IMAGE,
+    },
+  };
+}
+
+/** Update name/image/slug and sync embedded product.category fields. */
+export function applyCategoryUpdate(
+  data: CatalogData,
+  index: number,
+  fields: Record<string, string>
+): { error?: string } {
+  const current = data.categories[index];
+  if (!current) return { error: "Category not found" };
+
+  if (fields.name?.trim()) current.name = fields.name.trim();
+
+  if (fields.slug?.trim()) {
+    const nextSlug = slugify(fields.slug);
+    if (!nextSlug) return { error: "Invalid slug" };
+    if (data.categories.some((c, i) => i !== index && c.slug === nextSlug)) {
+      return { error: `Category slug "${nextSlug}" already exists` };
+    }
+    current.slug = nextSlug;
+  }
+
+  if (fields.image?.trim()) current.image = fields.image.trim();
+
+  for (const p of data.products) {
+    if (p.categoryId === current.id) {
+      p.category = { name: current.name, slug: current.slug };
+    }
+  }
+  return {};
+}
+
 /** Sync helpers for pages that still import named exports */
 export const catalogCategories = (localCatalog as CatalogData).categories;
 export const catalogProducts = (localCatalog as CatalogData).products;
