@@ -68,8 +68,43 @@ Message your bot:
 | `/image slug https://...` | change image |
 | `/remove` or `/delete` | tappable list of products to delete |
 | `/remove &lt;slug or title&gt;` | confirm delete for that listing |
-| `/categories` | category slugs |
+| `/categories` | list categories |
+| `/addcategory` | add a category |
+| `/setcategory &lt;slug&gt;` | rename or change category image |
+| `/rmcategory` | remove an empty category |
 | `/add` | multi-line add (see below) |
+
+### Categories
+
+List:
+
+```text
+/categories
+```
+
+Add (or send a **photo** with the same caption):
+
+```text
+/addcategory
+name: Textiles
+slug: textiles
+image: https://images.unsplash.com/photo-1616046229478-9901c5536a45?w=800&q=80
+```
+
+Edit name or image:
+
+```text
+/setcategory textiles
+name: Soft Textiles
+```
+
+Or send a photo with caption `/setcategory textiles`.
+
+Remove (only if no products use it) — `/rmcategory` for a tappable list, or:
+
+```text
+/rmcategory textiles
+```
 
 ### Delete a listing
 
