@@ -311,35 +311,6 @@
       },
       "createdAt": "2026-04-01T00:00:00.000Z",
       "reviews": []
-    },
-    {
-      "id": "prod-towels",
-      "title": "Handwoven Linen Tea Towels",
-      "slug": "handwoven-linen-tea-towels",
-      "description": "A set of three tea towels woven on a traditional loom — soft, absorbent, and beautiful on display.",
-      "story": "Woven from European flax linen in patterns passed down for generations.",
-      "price": 5199,
-      "discount": 0,
-      "images": [
-        "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=1200&q=80",
-        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&q=80"
-      ],
-      "stock": 45,
-      "artisan": "Meridian Loom Co-op",
-      "materials": "100% European flax linen",
-      "dimensions": "20 × 28 in each",
-      "rating": 4.8,
-      "reviewCount": 53,
-      "featured": true,
-      "trending": false,
-      "bestSeller": true,
-      "categoryId": "cat-kitchen",
-      "category": {
-        "name": "Kitchen Decor",
-        "slug": "kitchen-decor"
-      },
-      "createdAt": "2026-03-22T00:00:00.000Z",
-      "reviews": []
     }
   ]
 }
