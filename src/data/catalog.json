@@ -369,35 +369,6 @@
       },
       "createdAt": "2026-03-10T00:00:00.000Z",
       "reviews": []
-    },
-    {
-      "id": "prod-pourover",
-      "title": "Ceramic Pour-Over Set",
-      "slug": "ceramic-pour-over-set",
-      "description": "A hand-thrown pour-over dripper with matching mug — ritual coffee, elevated.",
-      "story": "Refined over years of daily use for a balanced pour and easy cleaning.",
-      "price": 7999,
-      "discount": 0,
-      "images": [
-        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1200&q=80",
-        "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=1200&q=80"
-      ],
-      "stock": 22,
-      "artisan": "Amelia Brooks",
-      "materials": "Porcelain, satin matte glaze",
-      "dimensions": "Dripper 5 in / Mug 12 oz",
-      "rating": 4.9,
-      "reviewCount": 74,
-      "featured": true,
-      "trending": true,
-      "bestSeller": true,
-      "categoryId": "cat-ceramics",
-      "category": {
-        "name": "Ceramics",
-        "slug": "ceramics"
-      },
-      "createdAt": "2026-03-01T00:00:00.000Z",
-      "reviews": []
     }
   ]
 }
