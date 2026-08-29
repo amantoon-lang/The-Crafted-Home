@@ -456,35 +456,6 @@
       },
       "createdAt": "2026-02-05T00:00:00.000Z",
       "reviews": []
-    },
-    {
-      "id": "prod-hanger",
-      "title": "Braided Plant Hanger",
-      "slug": "braided-plant-hanger",
-      "description": "A sculptural plant hanger braided from soft cotton rope — bring greenery into vertical space.",
-      "story": "Braided by hand in small studio batches.",
-      "price": 2799,
-      "discount": 0,
-      "images": [
-        "https://images.unsplash.com/photo-1463320898484-cdee8141c787?w=1200&q=80",
-        "https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=1200&q=80"
-      ],
-      "stock": 38,
-      "artisan": "Nora Kim",
-      "materials": "Organic cotton rope",
-      "dimensions": "42 in length",
-      "rating": 4.4,
-      "reviewCount": 33,
-      "featured": false,
-      "trending": false,
-      "bestSeller": false,
-      "categoryId": "cat-macrame",
-      "category": {
-        "name": "Macrame",
-        "slug": "macrame"
-      },
-      "createdAt": "2026-01-28T00:00:00.000Z",
-      "reviews": []
     }
   ]
 }
