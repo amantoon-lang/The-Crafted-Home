@@ -113,8 +113,9 @@
   ],
   "topNav": [
     {
-      "label": "Shop",
-      "type": "shop"
+      "type": "category",
+      "categorySlug": "wooden-decor",
+      "label": "Decor"
     },
     {
       "type": "category",
