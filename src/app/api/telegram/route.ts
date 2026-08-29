@@ -8,6 +8,8 @@ import {
   findCategoryIndex,
   parseKeyValueMessage,
   uploadCatalogImage,
+  uploadCatalogVideo,
+  MAX_PRODUCT_IMAGES,
   type CatalogData,
 } from "@/data/catalog";
 import { formatCurrency } from "@/lib/utils";
@@ -22,6 +24,20 @@ type TelegramUpdate = {
     chat: { id: number; type: string };
     from?: { id: number; username?: string; first_name?: string };
     photo?: { file_id: string; file_unique_id: string }[];
+    video?: {
+      file_id: string;
+      file_unique_id: string;
+      mime_type?: string;
+      file_size?: number;
+      file_name?: string;
+    };
+    document?: {
+      file_id: string;
+      file_unique_id: string;
+      mime_type?: string;
+      file_size?: number;
+      file_name?: string;
+    };
   };
   callback_query?: {
     id: string;
@@ -155,10 +171,11 @@ function buildRemovePicker(catalog: CatalogData) {
   return { inline_keyboard };
 }
 
-/** Download a Telegram photo and re-host it in the repo (never store bot-token URLs). */
-async function hostTelegramPhoto(
+/** Download a Telegram file and re-host it in the repo (never store bot-token URLs). */
+async function hostTelegramFile(
   fileId: string,
-  slugHint = "product"
+  slugHint = "product",
+  kind: "image" | "video" = "image"
 ): Promise<{ url?: string; error?: string }> {
   const token = botToken();
   const meta = await fetch(
@@ -170,10 +187,25 @@ async function hostTelegramPhoto(
 
   const tgUrl = `https://api.telegram.org/file/bot${token}/${path}`;
   const fileRes = await fetch(tgUrl);
-  if (!fileRes.ok) return { error: "Could not download Telegram photo" };
+  if (!fileRes.ok) {
+    return { error: `Could not download Telegram ${kind}` };
+  }
   const bytes = Buffer.from(await fileRes.arrayBuffer());
-  const ext = path.includes(".") ? path.split(".").pop() : "jpg";
-  const filename = `${slugHint}-${Date.now()}.${ext || "jpg"}`;
+  const ext = path.includes(".") ? path.split(".").pop() : kind === "video" ? "mp4" : "jpg";
+  const filename = `${slugHint}-${Date.now()}.${ext || (kind === "video" ? "mp4" : "jpg")}`;
+
+  if (kind === "video") {
+    const uploaded = await uploadCatalogVideo(
+      bytes,
+      filename,
+      `telegram: host video ${filename}`
+    );
+    if (!uploaded.ok || !uploaded.url) {
+      return { error: uploaded.error || "Video upload failed" };
+    }
+    return { url: uploaded.url };
+  }
+
   const uploaded = await uploadCatalogImage(
     bytes,
     filename,
@@ -183,6 +215,10 @@ async function hostTelegramPhoto(
     return { error: uploaded.error || "Image upload failed" };
   }
   return { url: uploaded.url };
+}
+
+async function hostTelegramPhoto(fileId: string, slugHint = "product") {
+  return hostTelegramFile(fileId, slugHint, "image");
 }
 
 function helpText() {
@@ -196,7 +232,12 @@ Prices are in <b>INR (₹)</b>.
 /price &lt;slug&gt; &lt;amount&gt; — set price in ₹
 /stock &lt;slug&gt; &lt;qty&gt; — set stock
 /discount &lt;slug&gt; &lt;percent&gt; — set discount %
-/image &lt;slug&gt; — send photo with this caption, or /image &lt;slug&gt; &lt;url&gt;
+/photos &lt;slug&gt; — list photos + video
+/photo &lt;slug&gt; — add a photo (up to ${MAX_PRODUCT_IMAGES}; send photo with this caption)
+/image &lt;slug&gt; — set cover photo (first image)
+/delphoto &lt;slug&gt; &lt;n&gt; — remove photo #n
+/video &lt;slug&gt; — set product video (send video with this caption)
+/delvideo &lt;slug&gt; — remove video
 /remove — tappable list to delete a listing (alias: /delete)
 /add — add product (multi-line or photo + caption)
 
@@ -206,10 +247,24 @@ Prices are in <b>INR (₹)</b>.
 /setcategory &lt;slug&gt; — rename or change image
 /rmcategory — remove a category (tappable list)
 
-<code>/addcategory
-name: Textiles
-slug: textiles
-image: https://...</code>`;
+Each product can have <b>up to ${MAX_PRODUCT_IMAGES} photos</b> and <b>1 video</b>.`;
+}
+
+function mediaSummary(product: {
+  title: string;
+  slug: string;
+  images: string[];
+  video?: string | null;
+}) {
+  const photoLines = product.images
+    .map((url, i) => `${i + 1}. ${url}`)
+    .join("\n");
+  return (
+    `<b>${product.title}</b>\n<code>${product.slug}</code>\n` +
+    `Photos: ${product.images.length}/${MAX_PRODUCT_IMAGES}\n` +
+    (photoLines ? `${photoLines}\n` : "") +
+    `Video: ${product.video || "none"}`
+  );
 }
 
 function listCategories(data: CatalogData) {
@@ -708,8 +763,197 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
       }
       await sendMessage(
         chatId,
-        `<b>${product.title}</b>\nPrice: ${formatCurrency(product.price)}\nDiscount: ${product.discount}%\nStock: ${product.stock}\nCategory: ${product.category?.slug}\nArtisan: ${product.artisan}\nSlug: <code>${product.slug}</code>\nImage: ${product.images[0]}`
+        `<b>${product.title}</b>\nPrice: ${formatCurrency(product.price)}\nDiscount: ${product.discount}%\nStock: ${product.stock}\nCategory: ${product.category?.slug}\nArtisan: ${product.artisan}\nSlug: <code>${product.slug}</code>\nPhotos: ${product.images.length}/${MAX_PRODUCT_IMAGES}\nVideo: ${product.video ? "yes" : "none"}`
       );
+      return NextResponse.json({ ok: true });
+    }
+
+    if (cmd === "/photos") {
+      const slug = rest[0];
+      const product = catalog.products.find((p) => p.slug === slug);
+      if (!product) {
+        await sendMessage(chatId, `Product not found: <code>${slug || "?"}</code>`);
+        return NextResponse.json({ ok: true });
+      }
+      await sendMessage(chatId, mediaSummary(product));
+      return NextResponse.json({ ok: true });
+    }
+
+    if (
+      cmd === "/photo" ||
+      cmd === "/addphoto" ||
+      cmd === "/addimage"
+    ) {
+      const slug = rest[0];
+      const idx = catalog.products.findIndex((p) => p.slug === slug);
+      if (idx === -1) {
+        await sendMessage(
+          chatId,
+          `Product not found: <code>${slug || "?"}</code>\nUsage: send a photo with caption <code>/photo your-slug</code>`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      if (catalog.products[idx].images.length >= MAX_PRODUCT_IMAGES) {
+        await sendMessage(
+          chatId,
+          `Already has ${MAX_PRODUCT_IMAGES} photos. Remove one with /delphoto &lt;slug&gt; &lt;n&gt; first.`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      let imageUrl = rest.slice(1).join(" ").trim();
+      if (message.photo?.length) {
+        const largest = message.photo[message.photo.length - 1];
+        const hosted = await hostTelegramPhoto(largest.file_id, slug);
+        if (hosted.error || !hosted.url) {
+          await sendMessage(chatId, `Could not host photo: ${hosted.error}`);
+          return NextResponse.json({ ok: true });
+        }
+        imageUrl = hosted.url;
+      }
+      if (!imageUrl) {
+        await sendMessage(
+          chatId,
+          `Send a photo with caption <code>/photo ${slug}</code>\nor <code>/photo ${slug} https://...</code>`
+        );
+        return NextResponse.json({ ok: true });
+      }
+      if (imageUrl.includes("api.telegram.org/file/bot")) {
+        await sendMessage(
+          chatId,
+          "Don't use Telegram file links. Send the photo with caption /photo &lt;slug&gt; instead."
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      catalog.products[idx].images.push(imageUrl);
+      const saved = await saveCatalog(
+        catalog,
+        `telegram: add photo ${slug} by ${message.from?.username || fromId}`
+      );
+      if (!saved.ok) {
+        await sendMessage(chatId, `Failed to save: ${saved.error}`);
+        return NextResponse.json({ ok: true });
+      }
+      await sendMessage(
+        chatId,
+        `Added photo ${catalog.products[idx].images.length}/${MAX_PRODUCT_IMAGES} to <b>${catalog.products[idx].title}</b>\nSend more with <code>/photo ${slug}</code> or a video with <code>/video ${slug}</code>`
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    if (cmd === "/delphoto" || cmd === "/rmphoto") {
+      const slug = rest[0];
+      const n = Number(rest[1]);
+      const idx = catalog.products.findIndex((p) => p.slug === slug);
+      if (idx === -1) {
+        await sendMessage(chatId, `Product not found: <code>${slug || "?"}</code>`);
+        return NextResponse.json({ ok: true });
+      }
+      if (!Number.isFinite(n) || n < 1 || n > catalog.products[idx].images.length) {
+        await sendMessage(
+          chatId,
+          `Usage: /delphoto &lt;slug&gt; &lt;n&gt;\n${mediaSummary(catalog.products[idx])}`
+        );
+        return NextResponse.json({ ok: true });
+      }
+      if (catalog.products[idx].images.length <= 1) {
+        await sendMessage(chatId, "Keep at least one photo. Use /image to replace it.");
+        return NextResponse.json({ ok: true });
+      }
+      catalog.products[idx].images.splice(n - 1, 1);
+      const saved = await saveCatalog(
+        catalog,
+        `telegram: del photo ${slug} #${n} by ${message.from?.username || fromId}`
+      );
+      if (!saved.ok) {
+        await sendMessage(chatId, `Failed to save: ${saved.error}`);
+        return NextResponse.json({ ok: true });
+      }
+      await sendMessage(chatId, mediaSummary(catalog.products[idx]));
+      return NextResponse.json({ ok: true });
+    }
+
+    if (cmd === "/video" || cmd === "/setvideo") {
+      const slug = rest[0];
+      const idx = catalog.products.findIndex((p) => p.slug === slug);
+      if (idx === -1) {
+        await sendMessage(
+          chatId,
+          `Product not found: <code>${slug || "?"}</code>\nUsage: send a video with caption <code>/video your-slug</code>`
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      let videoUrl = rest.slice(1).join(" ").trim();
+      const videoFile =
+        message.video ||
+        (message.document?.mime_type?.startsWith("video/")
+          ? message.document
+          : undefined);
+
+      if (videoFile) {
+        if (videoFile.file_size && videoFile.file_size > 18 * 1024 * 1024) {
+          await sendMessage(chatId, "Video must be under 18MB.");
+          return NextResponse.json({ ok: true });
+        }
+        const hosted = await hostTelegramFile(videoFile.file_id, slug, "video");
+        if (hosted.error || !hosted.url) {
+          await sendMessage(chatId, `Could not host video: ${hosted.error}`);
+          return NextResponse.json({ ok: true });
+        }
+        videoUrl = hosted.url;
+      }
+
+      if (!videoUrl) {
+        await sendMessage(
+          chatId,
+          `Send a video with caption <code>/video ${slug}</code>\nor <code>/video ${slug} https://...</code>`
+        );
+        return NextResponse.json({ ok: true });
+      }
+      if (videoUrl.includes("api.telegram.org/file/bot")) {
+        await sendMessage(
+          chatId,
+          "Don't use Telegram file links. Send the video with caption /video &lt;slug&gt; instead."
+        );
+        return NextResponse.json({ ok: true });
+      }
+
+      catalog.products[idx].video = videoUrl;
+      const saved = await saveCatalog(
+        catalog,
+        `telegram: set video ${slug} by ${message.from?.username || fromId}`
+      );
+      if (!saved.ok) {
+        await sendMessage(chatId, `Failed to save: ${saved.error}`);
+        return NextResponse.json({ ok: true });
+      }
+      await sendMessage(
+        chatId,
+        `Video set for <b>${catalog.products[idx].title}</b>\n${videoUrl}`
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    if (cmd === "/delvideo" || cmd === "/rmvideo") {
+      const slug = rest[0];
+      const idx = catalog.products.findIndex((p) => p.slug === slug);
+      if (idx === -1) {
+        await sendMessage(chatId, `Product not found: <code>${slug || "?"}</code>`);
+        return NextResponse.json({ ok: true });
+      }
+      catalog.products[idx].video = null;
+      const saved = await saveCatalog(
+        catalog,
+        `telegram: del video ${slug} by ${message.from?.username || fromId}`
+      );
+      if (!saved.ok) {
+        await sendMessage(chatId, `Failed to save: ${saved.error}`);
+        return NextResponse.json({ ok: true });
+      }
+      await sendMessage(chatId, `Video removed from <b>${catalog.products[idx].title}</b>`);
       return NextResponse.json({ ok: true });
     }
 
@@ -736,7 +980,7 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
         if (!imageUrl) {
           await sendMessage(
             chatId,
-            "Usage: /image &lt;slug&gt; &lt;https://...&gt;\nOr send a photo with caption: /image &lt;slug&gt;"
+            "Usage: /image &lt;slug&gt; &lt;https://...&gt;\nOr send a photo with caption: /image &lt;slug&gt;\nTo <b>add</b> another photo (up to 5+), use /photo &lt;slug&gt;"
           );
           return NextResponse.json({ ok: true });
         }
@@ -747,10 +991,12 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
           );
           return NextResponse.json({ ok: true });
         }
-        catalog.products[idx].images = [
-          imageUrl,
-          ...catalog.products[idx].images.slice(1),
-        ];
+        // Set as cover (first), keep other photos
+        const restImages = catalog.products[idx].images.filter((u) => u !== imageUrl);
+        catalog.products[idx].images = [imageUrl, ...restImages].slice(
+          0,
+          MAX_PRODUCT_IMAGES
+        );
       } else {
         if (!value) {
           await sendMessage(chatId, `Usage: ${cmd} &lt;slug&gt; &lt;value&gt;`);
@@ -788,10 +1034,14 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
         await sendMessage(chatId, `Failed to save: ${saved.error}`);
         return NextResponse.json({ ok: true });
       }
-      await sendMessage(
-        chatId,
-        `Updated <b>${catalog.products[idx].title}</b>\n${formatCurrency(catalog.products[idx].price)} · stock ${catalog.products[idx].stock} · discount ${catalog.products[idx].discount}%`
-      );
+      if (cmd === "/image") {
+        await sendMessage(chatId, mediaSummary(catalog.products[idx]));
+      } else {
+        await sendMessage(
+          chatId,
+          `Updated <b>${catalog.products[idx].title}</b>\n${formatCurrency(catalog.products[idx].price)} · stock ${catalog.products[idx].stock} · discount ${catalog.products[idx].discount}%`
+        );
+      }
       return NextResponse.json({ ok: true });
     }
 
@@ -844,7 +1094,7 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
       }
       const fields = parseKeyValueMessage(body);
 
-      if (message.photo?.length && !fields.image) {
+      if (message.photo?.length && !fields.image && !fields.images) {
         const largest = message.photo[message.photo.length - 1];
         const hosted = await hostTelegramPhoto(
           largest.file_id,
@@ -858,6 +1108,27 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
           return NextResponse.json({ ok: true });
         }
         fields.image = hosted.url;
+      }
+
+      const videoFile =
+        message.video ||
+        (message.document?.mime_type?.startsWith("video/")
+          ? message.document
+          : undefined);
+      if (videoFile && !fields.video) {
+        const hosted = await hostTelegramFile(
+          videoFile.file_id,
+          (fields.title || "product").toLowerCase().replace(/\s+/g, "-").slice(0, 40),
+          "video"
+        );
+        if (hosted.error || !hosted.url) {
+          await sendMessage(
+            chatId,
+            `Video received but could not host: ${hosted.error || "unknown error"}`
+          );
+          return NextResponse.json({ ok: true });
+        }
+        fields.video = hosted.url;
       }
 
       const created = createProductFromFields(catalog, fields);
@@ -880,7 +1151,20 @@ image: https://...</code>\n\nOr send a photo with caption <code>/setcategory ${s
       }
       await sendMessage(
         chatId,
-        `Added <b>${created.product.title}</b>\n${formatCurrency(created.product.price)}\n<code>${created.product.slug}</code>`
+        `Added <b>${created.product.title}</b>\n${formatCurrency(created.product.price)}\n<code>${created.product.slug}</code>\n\n` +
+          `Photos: ${created.product.images.length}/${MAX_PRODUCT_IMAGES}` +
+          (created.product.video ? ` · Video: yes` : "") +
+          `\n\nAdd more photos (up to ${MAX_PRODUCT_IMAGES}): send each with caption\n<code>/photo ${created.product.slug}</code>\n` +
+          `Add a video: send with caption\n<code>/video ${created.product.slug}</code>`
+      );
+      return NextResponse.json({ ok: true });
+    }
+
+    // Standalone video without a recognized command
+    if (message.video || message.document?.mime_type?.startsWith("video/")) {
+      await sendMessage(
+        chatId,
+        "To attach a video, send it with caption:\n<code>/video product-slug</code>"
       );
       return NextResponse.json({ ok: true });
     }
