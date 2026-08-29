@@ -21,6 +21,35 @@
   ],
   "products": [
     {
+      "id": "prod-mtelairc",
+      "title": "Wooden coaster peach",
+      "slug": "wooden-coaster-peach",
+      "description": "Wooden coaster peach",
+      "story": "",
+      "price": 600,
+      "discount": 0,
+      "images": [
+        "https://raw.githubusercontent.com/amantoon-lang/The-Crafted-Home/main/public/catalog-images/wooden-coaster-peach-1788020586164.jpg"
+      ],
+      "video": null,
+      "stock": 10,
+      "artisan": "The Crafted Home",
+      "materials": "Handmade",
+      "dimensions": "",
+      "rating": 5,
+      "reviewCount": 0,
+      "featured": false,
+      "trending": false,
+      "bestSeller": false,
+      "categoryId": "cat-wooden",
+      "category": {
+        "name": "Home Decor",
+        "slug": "wooden-decor"
+      },
+      "createdAt": "2026-08-29T16:23:07.128Z",
+      "reviews": []
+    },
+    {
       "id": "prod-mtel1uns",
       "title": "Queen’s fame",
       "slug": "queens-fame",
