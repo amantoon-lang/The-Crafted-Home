@@ -31,6 +31,37 @@ function adminIds(): Set<string> {
   );
 }
 
+/** Parse TELEGRAM_ADMIN_IDS into user IDs and group/chat IDs. */
+function parseAccessLists() {
+  const all = [...adminIds()];
+  const userIds = new Set<string>();
+  const chatIds = new Set<string>();
+  for (const id of all) {
+    // Telegram group/supergroup/channel ids are negative (often -100...)
+    if (id.startsWith("-")) chatIds.add(id);
+    else userIds.add(id);
+  }
+  // Optional dedicated env for group chats
+  for (const id of (process.env.TELEGRAM_ALLOWED_CHAT_IDS || "").split(",")) {
+    const t = id.trim();
+    if (t) chatIds.add(t);
+  }
+  return { userIds, chatIds };
+}
+
+function isAuthorized(fromId: string, chatId: number): boolean {
+  const { userIds, chatIds } = parseAccessLists();
+  if (!userIds.size && !chatIds.size) return true; // open if nothing configured
+
+  // Personal admin — can use bot in DM or any group
+  if (fromId && userIds.has(fromId)) return true;
+
+  // Whole-group access — any member in an allowed group chat
+  if (chatIds.has(String(chatId))) return true;
+
+  return false;
+}
+
 function botToken() {
   return process.env.TELEGRAM_BOT_TOKEN || "";
 }
@@ -141,19 +172,37 @@ export async function POST(req: Request) {
 
   const chatId = message.chat.id;
   const fromId = String(message.from?.id || "");
-  const admins = adminIds();
 
-  if (admins.size && !admins.has(fromId)) {
-    await sendMessage(chatId, "Sorry, only catalog admins can use this bot.");
+  if (!isAuthorized(fromId, chatId)) {
+    await sendMessage(
+      chatId,
+      `Sorry, only catalog admins can use this bot.\n\n` +
+        `<b>Your user id:</b> <code>${fromId || "unknown"}</code>\n` +
+        `<b>This chat id:</b> <code>${chatId}</code>\n\n` +
+        `In Vercel, set <code>TELEGRAM_ADMIN_IDS</code> to your <b>user id</b> (from @userinfobot), ` +
+        `or include this chat id to allow the whole group.\n` +
+        `Example: <code>900108032,-1001234567890</code>\n` +
+        `Then Redeploy.`
+    );
     return NextResponse.json({ ok: true });
   }
 
   const text = (message.text || message.caption || "").trim();
-  const [command, ...rest] = text.split(/\s+/);
-  const cmd = (command || "").toLowerCase();
+  // In groups Telegram may send "/list@MyBot" — strip the @bot suffix
+  const [rawCommand, ...rest] = text.split(/\s+/);
+  const cmd = (rawCommand || "").toLowerCase().replace(/@\w+$/i, "");
 
   try {
-    if (cmd === "/start" || cmd === "/help") {
+    if (cmd === "/start" || cmd === "/help" || cmd === "/whoami" || cmd === "/id") {
+      if (cmd === "/whoami" || cmd === "/id") {
+        await sendMessage(
+          chatId,
+          `<b>Your user id:</b> <code>${fromId}</code>\n` +
+            `<b>This chat id:</b> <code>${chatId}</code>\n` +
+            `Put your user id in TELEGRAM_ADMIN_IDS (recommended).`
+        );
+        return NextResponse.json({ ok: true });
+      }
       await sendMessage(chatId, helpText());
       return NextResponse.json({ ok: true });
     }
