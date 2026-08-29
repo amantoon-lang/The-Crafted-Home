@@ -24,7 +24,11 @@ In your Vercel project → Settings → Environment Variables:
 
 ```env
 TELEGRAM_BOT_TOKEN=123456:ABC...
-TELEGRAM_ADMIN_IDS=your_numeric_telegram_id
+# Your personal Telegram user id from @userinfobot (required for DMs).
+# You can also add a group chat id (negative, like -100...) to allow that whole group.
+TELEGRAM_ADMIN_IDS=900108032,-1001234567890
+# Optional: extra group chat ids (comma-separated)
+TELEGRAM_ALLOWED_CHAT_IDS=
 GITHUB_TOKEN=ghp_...
 GITHUB_REPO=amantoon-lang/The-Crafted-Home
 GITHUB_CATALOG_BRANCH=main
@@ -35,7 +39,10 @@ AUTH_URL=https://www.jiacraft.com
 NEXT_PUBLIC_APP_URL=https://www.jiacraft.com
 ```
 
-Redeploy after saving env vars.
+**Important:** `TELEGRAM_ADMIN_IDS` must include your **personal user id** (positive number from [@userinfobot](https://t.me/userinfobot)), not only the group id.  
+You can add the group id too (starts with `-`) if you want anyone in that group to run catalog commands.
+
+In a group, send `/id` to the bot to see both ids. Then Redeploy after updating Vercel.
 
 ## 5. Set the webhook
 
