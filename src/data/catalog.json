@@ -224,35 +224,6 @@
       },
       "createdAt": "2026-05-10T00:00:00.000Z",
       "reviews": []
-    },
-    {
-      "id": "prod-botanical",
-      "title": "Abstract Botanical Print",
-      "slug": "abstract-botanical-print",
-      "description": "Limited-edition print with soft greens and warm neutrals that complement handmade textiles and wood.",
-      "story": "Signed and numbered on archival cotton rag paper.",
-      "price": 6499,
-      "discount": 0,
-      "images": [
-        "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=1200&q=80",
-        "https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=1200&q=80"
-      ],
-      "stock": 40,
-      "artisan": "Priya Nair",
-      "materials": "Archival cotton rag, pigment ink",
-      "dimensions": "16 × 20 in (unframed)",
-      "rating": 4.6,
-      "reviewCount": 19,
-      "featured": false,
-      "trending": true,
-      "bestSeller": false,
-      "categoryId": "cat-wall",
-      "category": {
-        "name": "Wall Art",
-        "slug": "wall-art"
-      },
-      "createdAt": "2026-04-28T00:00:00.000Z",
-      "reviews": []
     }
   ]
 }
