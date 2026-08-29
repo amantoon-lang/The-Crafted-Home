@@ -5,6 +5,12 @@
       "name": "Wooden Decor",
       "slug": "wooden-decor",
       "image": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80"
+    },
+    {
+      "id": "cat-mtehxrdw",
+      "name": "Home decor",
+      "slug": "home-decor",
+      "image": "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&q=80"
     }
   ],
   "products": [
