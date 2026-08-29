@@ -5,6 +5,7 @@ import {
   ensureHomeSections,
   resolveHomeProducts,
   resolveHomeCategories,
+  getSiteMediaSlot,
 } from "@/data/catalog";
 import { Button } from "@/components/ui/button";
 import { ProductGrid } from "@/components/products/product-grid";
@@ -12,6 +13,29 @@ import { FadeIn } from "@/components/ui/motion";
 import { Quote, Leaf, HandHeart, Truck } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+/** Optional Telegram-managed banner above a homepage section. */
+function SiteSectionBanner({
+  image,
+  title,
+}: {
+  image?: string;
+  title: string;
+}) {
+  if (!image) return null;
+  return (
+    <div className="relative mb-10 aspect-[21/9] w-full overflow-hidden sm:aspect-[3/1]">
+      <Image
+        src={image}
+        alt={title}
+        fill
+        className="object-cover"
+        sizes="100vw"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+    </div>
+  );
+}
 
 /** Craft-specific scenes when a category has no product photo and still uses generic stock. */
 const CATEGORY_SCENES: Record<string, string> = {
@@ -142,14 +166,28 @@ export default async function HomePage() {
 
   /** Brand hero — Lippan craft flat-lay. Overrides latest-product default. */
   const BRAND_HERO = "/home/lippan-craft-hero.jpg";
+  const landingMedia = getSiteMediaSlot(catalog, "landing");
+  const collectionsMedia = getSiteMediaSlot(catalog, "collections");
+  const featuredMedia = getSiteMediaSlot(catalog, "featured");
+  const trendingMedia = getSiteMediaSlot(catalog, "trending");
+  const bestsellersMedia = getSiteMediaSlot(catalog, "bestsellers");
+  const artisansMedia = getSiteMediaSlot(catalog, "artisans");
+  const whyMedia = getSiteMediaSlot(catalog, "whyHandmade");
+  const storiesMedia = getSiteMediaSlot(catalog, "testimonials");
+  const atelierMedia = getSiteMediaSlot(catalog, "atelier");
+
   const heroCurated =
     sections.hero.visible && sections.hero.itemIds.length > 0
       ? resolveHomeProducts(catalog, "hero", [], 1)[0]
       : undefined;
-  const heroImage = heroCurated?.images?.[0] || BRAND_HERO;
+  const heroImage =
+    landingMedia.image || heroCurated?.images?.[0] || BRAND_HERO;
   const heroAlt =
+    landingMedia.text ||
     heroCurated?.title ||
     "Handmade Lippan art décor on velvet — The Crafted Home, Bhopal";
+  const heroHeadline =
+    landingMedia.text || "Handcrafted with Love, Designed for Your Home.";
 
   const atelierProducts = resolveHomeProducts(
     catalog,
@@ -204,7 +242,7 @@ export default async function HomePage() {
             </FadeIn>
             <FadeIn delay={0.12}>
               <h1 className="mt-4 max-w-2xl text-xl font-light text-white/90 sm:text-2xl lg:text-3xl">
-                Handcrafted with Love, Designed for Your Home.
+                {heroHeadline}
               </h1>
             </FadeIn>
             <FadeIn delay={0.22}>
@@ -237,10 +275,14 @@ export default async function HomePage() {
           id="collections"
           className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8"
         >
+          <SiteSectionBanner
+            image={collectionsMedia.image}
+            title={collectionsMedia.text || "Featured Collections"}
+          />
           <FadeIn>
             <div className="mb-10 max-w-xl">
               <h2 className="font-display text-3xl sm:text-4xl">
-                Featured Collections
+                {collectionsMedia.text || "Featured Collections"}
               </h2>
               <p className="mt-3 text-muted-foreground">
                 Explore categories shaped by material, craft, and the makers
@@ -276,10 +318,14 @@ export default async function HomePage() {
       {sections.featured.visible && featured.length > 0 && (
         <section className="texture-bg py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <SiteSectionBanner
+              image={featuredMedia.image}
+              title={featuredMedia.text || "Featured Pieces"}
+            />
             <div className="mb-10 flex items-end justify-between gap-4">
               <div>
                 <h2 className="font-display text-3xl sm:text-4xl">
-                  Featured Pieces
+                  {featuredMedia.text || "Featured Pieces"}
                 </h2>
                 <p className="mt-3 text-muted-foreground">
                   Fresh from the workshop — pieces with lasting presence.
@@ -296,9 +342,13 @@ export default async function HomePage() {
 
       {sections.trending.visible && trending.length > 0 && (
         <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+          <SiteSectionBanner
+            image={trendingMedia.image}
+            title={trendingMedia.text || "Trending Handmade Items"}
+          />
           <div className="mb-10">
             <h2 className="font-display text-3xl sm:text-4xl">
-              Trending Handmade Items
+              {trendingMedia.text || "Trending Handmade Items"}
             </h2>
             <p className="mt-3 text-muted-foreground">
               What collectors are bringing home this season.
@@ -311,8 +361,14 @@ export default async function HomePage() {
       {sections.bestsellers.visible && bestsellers.length > 0 && (
         <section className="border-y border-border bg-secondary/40 py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <SiteSectionBanner
+              image={bestsellersMedia.image}
+              title={bestsellersMedia.text || "Bestsellers"}
+            />
             <div className="mb-10">
-              <h2 className="font-display text-3xl sm:text-4xl">Bestsellers</h2>
+              <h2 className="font-display text-3xl sm:text-4xl">
+                {bestsellersMedia.text || "Bestsellers"}
+              </h2>
               <p className="mt-3 text-muted-foreground">
                 Beloved pieces, again and again.
               </p>
@@ -327,10 +383,14 @@ export default async function HomePage() {
           id="artisans"
           className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8"
         >
+          <SiteSectionBanner
+            image={artisansMedia.image}
+            title={artisansMedia.text || "Featured Artisans"}
+          />
           <FadeIn>
             <div className="mb-10 max-w-xl">
               <h2 className="font-display text-3xl sm:text-4xl">
-                Featured Artisans
+                {artisansMedia.text || "Featured Artisans"}
               </h2>
               <p className="mt-3 text-muted-foreground">
                 Meet the makers whose hands and stories shape every object.
@@ -366,9 +426,13 @@ export default async function HomePage() {
       {sections.whyHandmade.visible && (
         <section id="why-handmade" className="texture-bg py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <SiteSectionBanner
+              image={whyMedia.image}
+              title={whyMedia.text || "Why Buy Handmade"}
+            />
             <div className="mx-auto mb-12 max-w-2xl text-center">
               <h2 className="font-display text-3xl sm:text-4xl">
-                Why Buy Handmade
+                {whyMedia.text || "Why Buy Handmade"}
               </h2>
               <p className="mt-3 text-muted-foreground">
                 Slow objects for lasting homes — better for people, planet, and
@@ -413,9 +477,13 @@ export default async function HomePage() {
           id="testimonials"
           className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8"
         >
+          <SiteSectionBanner
+            image={storiesMedia.image}
+            title={storiesMedia.text || "Stories from Home"}
+          />
           <div className="mb-10 text-center">
             <h2 className="font-display text-3xl sm:text-4xl">
-              Stories from Home
+              {storiesMedia.text || "Stories from Home"}
             </h2>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
@@ -440,10 +508,14 @@ export default async function HomePage() {
       {sections.atelier.visible && atelier.length > 0 && (
         <section className="pb-8">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <SiteSectionBanner
+              image={atelierMedia.image}
+              title={atelierMedia.text || "From the Atelier"}
+            />
             <div className="mb-8 flex items-end justify-between">
               <div>
                 <h2 className="font-display text-3xl sm:text-4xl">
-                  From the Atelier
+                  {atelierMedia.text || "From the Atelier"}
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Real pieces from The Crafted Home catalog
