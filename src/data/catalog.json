@@ -228,7 +228,7 @@
       "itemIds": []
     },
     "trending": {
-      "visible": true,
+      "visible": false,
       "itemIds": []
     },
     "bestsellers": {
