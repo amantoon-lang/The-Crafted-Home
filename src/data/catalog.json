@@ -340,35 +340,6 @@
       },
       "createdAt": "2026-03-22T00:00:00.000Z",
       "reviews": []
-    },
-    {
-      "id": "prod-shelf",
-      "title": "Walnut Floating Shelf",
-      "slug": "walnut-floating-shelf",
-      "description": "A minimal floating shelf milled from solid walnut — clean, gallery-like display for ceramics and books.",
-      "story": "Finished with hand-rubbed hardwax oil that deepens the grain over time.",
-      "price": 10999,
-      "discount": 12,
-      "images": [
-        "https://images.unsplash.com/photo-1594026112284-02bb6f3352fe?w=1200&q=80",
-        "https://images.unsplash.com/photo-1618220179428-22790b461013?w=1200&q=80"
-      ],
-      "stock": 16,
-      "artisan": "David Park",
-      "materials": "Solid walnut, steel hidden brackets",
-      "dimensions": "36 × 8 × 2 in",
-      "rating": 4.7,
-      "reviewCount": 22,
-      "featured": false,
-      "trending": false,
-      "bestSeller": true,
-      "categoryId": "cat-wooden",
-      "category": {
-        "name": "Wooden Decor",
-        "slug": "wooden-decor"
-      },
-      "createdAt": "2026-03-10T00:00:00.000Z",
-      "reviews": []
     }
   ]
 }
