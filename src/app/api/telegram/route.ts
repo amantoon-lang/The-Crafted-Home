@@ -4,6 +4,7 @@ import {
   saveCatalog,
   createProductFromFields,
   parseKeyValueMessage,
+  uploadCatalogImage,
   type CatalogData,
 } from "@/data/catalog";
 import { formatCurrency } from "@/lib/utils";
@@ -49,15 +50,34 @@ async function sendMessage(chatId: number, text: string) {
   });
 }
 
-async function getPhotoUrl(fileId: string): Promise<string | null> {
+/** Download a Telegram photo and re-host it in the repo (never store bot-token URLs). */
+async function hostTelegramPhoto(
+  fileId: string,
+  slugHint = "product"
+): Promise<{ url?: string; error?: string }> {
   const token = botToken();
   const meta = await fetch(
     `https://api.telegram.org/bot${token}/getFile?file_id=${fileId}`
   );
   const json = await meta.json();
-  const path = json?.result?.file_path;
-  if (!path) return null;
-  return `https://api.telegram.org/file/bot${token}/${path}`;
+  const path = json?.result?.file_path as string | undefined;
+  if (!path) return { error: "Could not fetch Telegram file path" };
+
+  const tgUrl = `https://api.telegram.org/file/bot${token}/${path}`;
+  const fileRes = await fetch(tgUrl);
+  if (!fileRes.ok) return { error: "Could not download Telegram photo" };
+  const bytes = Buffer.from(await fileRes.arrayBuffer());
+  const ext = path.includes(".") ? path.split(".").pop() : "jpg";
+  const filename = `${slugHint}-${Date.now()}.${ext || "jpg"}`;
+  const uploaded = await uploadCatalogImage(
+    bytes,
+    filename,
+    `telegram: host image ${filename}`
+  );
+  if (!uploaded.ok || !uploaded.url) {
+    return { error: uploaded.error || "Image upload failed" };
+  }
+  return { url: uploaded.url };
 }
 
 function helpText() {
@@ -175,34 +195,63 @@ export async function POST(req: Request) {
         await sendMessage(chatId, `Product not found: <code>${slug || "?"}</code>`);
         return NextResponse.json({ ok: true });
       }
-      if (!value) {
-        await sendMessage(chatId, `Usage: ${cmd} &lt;slug&gt; &lt;value&gt;`);
-        return NextResponse.json({ ok: true });
-      }
 
-      if (cmd === "/price") {
-        const price = Number(value);
-        if (!Number.isFinite(price) || price <= 0) {
-          await sendMessage(chatId, "Price must be a positive INR amount.");
+      if (cmd === "/image") {
+        let imageUrl = value;
+        if (message.photo?.length) {
+          const largest = message.photo[message.photo.length - 1];
+          const hosted = await hostTelegramPhoto(largest.file_id, slug);
+          if (hosted.error || !hosted.url) {
+            await sendMessage(chatId, `Could not host photo: ${hosted.error}`);
+            return NextResponse.json({ ok: true });
+          }
+          imageUrl = hosted.url;
+        }
+        if (!imageUrl) {
+          await sendMessage(
+            chatId,
+            "Usage: /image &lt;slug&gt; &lt;https://...&gt;\nOr send a photo with caption: /image &lt;slug&gt;"
+          );
           return NextResponse.json({ ok: true });
         }
-        catalog.products[idx].price = Math.round(price);
-      } else if (cmd === "/stock") {
-        const stock = Number(value);
-        if (!Number.isFinite(stock) || stock < 0) {
-          await sendMessage(chatId, "Stock must be 0 or more.");
+        if (imageUrl.includes("api.telegram.org/file/bot")) {
+          await sendMessage(
+            chatId,
+            "Don't use Telegram file links. Send the photo with caption /image &lt;slug&gt; instead."
+          );
           return NextResponse.json({ ok: true });
         }
-        catalog.products[idx].stock = Math.round(stock);
-      } else if (cmd === "/discount") {
-        const discount = Number(value);
-        if (!Number.isFinite(discount) || discount < 0 || discount > 90) {
-          await sendMessage(chatId, "Discount must be 0–90.");
+        catalog.products[idx].images = [
+          imageUrl,
+          ...catalog.products[idx].images.slice(1),
+        ];
+      } else {
+        if (!value) {
+          await sendMessage(chatId, `Usage: ${cmd} &lt;slug&gt; &lt;value&gt;`);
           return NextResponse.json({ ok: true });
         }
-        catalog.products[idx].discount = Math.round(discount);
-      } else if (cmd === "/image") {
-        catalog.products[idx].images = [value, ...catalog.products[idx].images.slice(1)];
+        if (cmd === "/price") {
+          const price = Number(value);
+          if (!Number.isFinite(price) || price <= 0) {
+            await sendMessage(chatId, "Price must be a positive INR amount.");
+            return NextResponse.json({ ok: true });
+          }
+          catalog.products[idx].price = Math.round(price);
+        } else if (cmd === "/stock") {
+          const stock = Number(value);
+          if (!Number.isFinite(stock) || stock < 0) {
+            await sendMessage(chatId, "Stock must be 0 or more.");
+            return NextResponse.json({ ok: true });
+          }
+          catalog.products[idx].stock = Math.round(stock);
+        } else if (cmd === "/discount") {
+          const discount = Number(value);
+          if (!Number.isFinite(discount) || discount < 0 || discount > 90) {
+            await sendMessage(chatId, "Discount must be 0–90.");
+            return NextResponse.json({ ok: true });
+          }
+          catalog.products[idx].discount = Math.round(discount);
+        }
       }
 
       const saved = await saveCatalog(
@@ -249,8 +298,18 @@ export async function POST(req: Request) {
 
       if (message.photo?.length && !fields.image) {
         const largest = message.photo[message.photo.length - 1];
-        const url = await getPhotoUrl(largest.file_id);
-        if (url) fields.image = url;
+        const hosted = await hostTelegramPhoto(
+          largest.file_id,
+          (fields.title || "product").toLowerCase().replace(/\s+/g, "-").slice(0, 40)
+        );
+        if (hosted.error || !hosted.url) {
+          await sendMessage(
+            chatId,
+            `Photo received but could not host image: ${hosted.error || "unknown error"}`
+          );
+          return NextResponse.json({ ok: true });
+        }
+        fields.image = hosted.url;
       }
 
       const created = createProductFromFields(catalog, fields);

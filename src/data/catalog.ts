@@ -32,6 +32,7 @@ export type CatalogData = {
 };
 
 const CATALOG_PATH = "src/data/catalog.json";
+const IMAGE_DIR = "public/catalog-images";
 
 function githubConfig() {
   const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
@@ -40,11 +41,92 @@ function githubConfig() {
     (process.env.VERCEL_GIT_REPO_OWNER && process.env.VERCEL_GIT_REPO_SLUG
       ? `${process.env.VERCEL_GIT_REPO_OWNER}/${process.env.VERCEL_GIT_REPO_SLUG}`
       : "amantoon-lang/The-Crafted-Home");
-  const branch =
-    process.env.GITHUB_CATALOG_BRANCH ||
-    process.env.VERCEL_GIT_COMMIT_REF ||
-    "main";
+  // Prefer explicit catalog branch; default to main (not preview deploy ref).
+  const branch = process.env.GITHUB_CATALOG_BRANCH || "main";
   return { token, repo, branch };
+}
+
+async function putGithubFile(
+  path: string,
+  contentBase64: string,
+  message: string
+): Promise<{ ok: boolean; error?: string; url?: string }> {
+  const { token, repo, branch } = githubConfig();
+  if (!token) {
+    return {
+      ok: false,
+      error:
+        "GITHUB_TOKEN is not set. Add a GitHub personal access token with repo contents write access in Vercel env.",
+    };
+  }
+
+  try {
+    const metaRes = await fetch(
+      `https://api.github.com/repos/${repo}/contents/${path}?ref=${encodeURIComponent(branch)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "User-Agent": "the-crafted-home",
+        },
+        cache: "no-store",
+      }
+    );
+    const meta = metaRes.ok ? await metaRes.json() : null;
+    const sha = meta?.sha as string | undefined;
+
+    const putRes = await fetch(
+      `https://api.github.com/repos/${repo}/contents/${path}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
+          "User-Agent": "the-crafted-home",
+        },
+        body: JSON.stringify({
+          message,
+          content: contentBase64,
+          branch,
+          ...(sha ? { sha } : {}),
+        }),
+      }
+    );
+
+    if (!putRes.ok) {
+      const err = await putRes.text();
+      if (putRes.status === 403 || putRes.status === 401) {
+        return {
+          ok: false,
+          error:
+            "GitHub token cannot write to the repo. Use a classic PAT with the `repo` scope, set GITHUB_TOKEN in Vercel, and redeploy.",
+        };
+      }
+      return { ok: false, error: err.slice(0, 300) };
+    }
+
+    const rawUrl = `https://raw.githubusercontent.com/${repo}/${branch}/${path}`;
+    return { ok: true, url: rawUrl };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Save failed" };
+  }
+}
+
+/** Host a product image in the repo so Next/Image can load it (no Telegram bot URLs). */
+export async function uploadCatalogImage(
+  bytes: Buffer,
+  filename: string,
+  message?: string
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "-");
+  const path = `${IMAGE_DIR}/${safe}`;
+  const saved = await putGithubFile(
+    path,
+    bytes.toString("base64"),
+    message || `telegram: upload image ${safe}`
+  );
+  return saved;
 }
 
 /** Load catalog — prefers live GitHub file so Telegram updates apply without redeploy. */
@@ -83,59 +165,12 @@ export async function saveCatalog(
   data: CatalogData,
   message: string
 ): Promise<{ ok: boolean; error?: string }> {
-  const { token, repo, branch } = githubConfig();
-  if (!token) {
-    return {
-      ok: false,
-      error:
-        "GITHUB_TOKEN is not set. Add a GitHub personal access token with repo contents write access in Vercel env.",
-    };
-  }
-
-  try {
-    const metaRes = await fetch(
-      `https://api.github.com/repos/${repo}/contents/${CATALOG_PATH}?ref=${encodeURIComponent(branch)}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github+json",
-          "User-Agent": "the-crafted-home",
-        },
-        cache: "no-store",
-      }
-    );
-    const meta = metaRes.ok ? await metaRes.json() : null;
-    const sha = meta?.sha as string | undefined;
-
-    const body = {
-      message,
-      content: Buffer.from(JSON.stringify(data, null, 2)).toString("base64"),
-      branch,
-      ...(sha ? { sha } : {}),
-    };
-
-    const putRes = await fetch(
-      `https://api.github.com/repos/${repo}/contents/${CATALOG_PATH}`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/vnd.github+json",
-          "Content-Type": "application/json",
-          "User-Agent": "the-crafted-home",
-        },
-        body: JSON.stringify(body),
-      }
-    );
-
-    if (!putRes.ok) {
-      const err = await putRes.text();
-      return { ok: false, error: err.slice(0, 300) };
-    }
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Save failed" };
-  }
+  const saved = await putGithubFile(
+    CATALOG_PATH,
+    Buffer.from(JSON.stringify(data, null, 2) + "\n").toString("base64"),
+    message
+  );
+  return { ok: saved.ok, error: saved.error };
 }
 
 export function getCatalogCategories(data: CatalogData) {
