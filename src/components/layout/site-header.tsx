@@ -21,7 +21,9 @@ import { useUIStore, useGuestCartStore } from "@/store";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
-const navLinks = [
+type NavLink = { href: string; label: string };
+
+const fallbackNavLinks: NavLink[] = [
   { href: "/shop", label: "Shop" },
   { href: "/shop?sort=popularity", label: "Bestsellers" },
   { href: "/shop?category=ceramics", label: "Ceramics" },
@@ -37,9 +39,29 @@ export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [query, setQuery] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [navLinks, setNavLinks] = useState<NavLink[]>(fallbackNavLinks);
   const guestItems = useGuestCartStore((s) => s.items);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/nav");
+        if (!res.ok) return;
+        const data = (await res.json()) as { links?: NavLink[] };
+        if (!cancelled && data.links?.length) {
+          setNavLinks(data.links.slice(0, 4));
+        }
+      } catch {
+        // keep fallback
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -89,7 +111,7 @@ export function SiteHeader() {
         <nav className="hidden items-center gap-8 lg:flex">
           {navLinks.map((link) => (
             <Link
-              key={link.href}
+              key={`${link.href}-${link.label}`}
               href={link.href}
               className={cn(
                 "text-sm transition-colors hover:text-primary",
@@ -196,7 +218,7 @@ export function SiteHeader() {
             <nav className="flex flex-col gap-1 px-4 py-4">
               {navLinks.map((link) => (
                 <Link
-                  key={link.href}
+                  key={`${link.href}-${link.label}`}
                   href={link.href}
                   className="rounded-xl px-3 py-3 text-sm hover:bg-secondary"
                 >

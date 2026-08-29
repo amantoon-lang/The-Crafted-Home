@@ -26,10 +26,87 @@ export type CatalogProduct = ProductCardData & {
   }[];
 };
 
+export type TopNavSlot = {
+  label: string;
+  type: "shop" | "bestsellers" | "category";
+  /** Required when type is category */
+  categorySlug?: string;
+};
+
 export type CatalogData = {
   categories: CatalogCategory[];
   products: CatalogProduct[];
+  /** Exactly 4 header links (Shop / Bestsellers / two collections by default). */
+  topNav?: TopNavSlot[];
 };
+
+export const DEFAULT_TOP_NAV: TopNavSlot[] = [
+  { label: "Shop", type: "shop" },
+  { label: "Bestsellers", type: "bestsellers" },
+  { label: "Ceramics", type: "category", categorySlug: "ceramics" },
+  { label: "Wood", type: "category", categorySlug: "wooden-decor" },
+];
+
+export function ensureTopNav(data: CatalogData): TopNavSlot[] {
+  if (Array.isArray(data.topNav) && data.topNav.length === 4) {
+    return data.topNav;
+  }
+  data.topNav = DEFAULT_TOP_NAV.map((s) => ({ ...s }));
+  return data.topNav;
+}
+
+/** Resolved header links for the site. */
+export function getTopNavLinks(data: CatalogData): { href: string; label: string }[] {
+  const slots = ensureTopNav(data);
+  return slots.map((slot) => {
+    if (slot.type === "shop") {
+      return { href: "/shop", label: slot.label || "Shop" };
+    }
+    if (slot.type === "bestsellers") {
+      return {
+        href: "/shop?sort=popularity",
+        label: slot.label || "Bestsellers",
+      };
+    }
+    const slug = slot.categorySlug || "";
+    const cat = data.categories.find((c) => c.slug === slug);
+    return {
+      href: `/shop?category=${slug}`,
+      label: slot.label || cat?.name || slug || "Collection",
+    };
+  });
+}
+
+export function setTopNavSlot(
+  data: CatalogData,
+  index: number,
+  slot: {
+    type: TopNavSlot["type"];
+    label?: string;
+    categorySlug?: string;
+  }
+): { error?: string } {
+  if (index < 0 || index > 3) return { error: "Slot must be 1–4" };
+  ensureTopNav(data);
+  if (slot.type === "category") {
+    if (!slot.categorySlug) return { error: "categorySlug is required" };
+    const cat = data.categories.find((c) => c.slug === slot.categorySlug);
+    if (!cat) return { error: `Unknown category: ${slot.categorySlug}` };
+    data.topNav![index] = {
+      type: "category",
+      categorySlug: cat.slug,
+      label: slot.label?.trim() || cat.name,
+    };
+    return {};
+  }
+  data.topNav![index] = {
+    type: slot.type,
+    label:
+      slot.label?.trim() ||
+      (slot.type === "shop" ? "Shop" : "Bestsellers"),
+  };
+  return {};
+}
 
 const CATALOG_PATH = "src/data/catalog.json";
 const IMAGE_DIR = "public/catalog-images";
@@ -192,6 +269,7 @@ export async function saveCatalog(
   data: CatalogData,
   message: string
 ): Promise<{ ok: boolean; error?: string }> {
+  ensureTopNav(data);
   const saved = await putGithubFile(
     CATALOG_PATH,
     Buffer.from(JSON.stringify(data, null, 2) + "\n").toString("base64"),
