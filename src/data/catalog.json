@@ -127,45 +127,6 @@
       },
       "createdAt": "2026-08-29T13:09:09.294Z",
       "reviews": []
-    },
-    {
-      "id": "prod-oak-board",
-      "title": "Hand-Carved Oak Serving Board",
-      "slug": "hand-carved-oak-serving-board",
-      "description": "A generously sized serving board carved from sustainably sourced oak — perfect for entertaining or everyday kitchen rituals.",
-      "story": "Each board is finished by hand with food-safe oil so the grain deepens beautifully over time.",
-      "price": 7499,
-      "discount": 10,
-      "images": [
-        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&q=80",
-        "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=1200&q=80"
-      ],
-      "stock": 24,
-      "artisan": "Maya Chen",
-      "materials": "American white oak, food-safe mineral oil",
-      "dimensions": "18 × 10 × 1 in",
-      "rating": 4.8,
-      "reviewCount": 42,
-      "featured": true,
-      "trending": true,
-      "bestSeller": true,
-      "categoryId": "cat-wooden",
-      "category": {
-        "name": "Wooden Decor",
-        "slug": "wooden-decor"
-      },
-      "createdAt": "2026-06-01T00:00:00.000Z",
-      "reviews": [
-        {
-          "id": "rev-1",
-          "rating": 5,
-          "comment": "Beautiful grain and substantial feel — our go-to cheese board.",
-          "createdAt": "2026-07-01T00:00:00.000Z",
-          "user": {
-            "name": "Avery Lane"
-          }
-        }
-      ]
     }
   ]
 }
