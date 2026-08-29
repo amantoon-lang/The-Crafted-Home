@@ -236,7 +236,7 @@
       "itemIds": []
     },
     "artisans": {
-      "visible": true,
+      "visible": false,
       "itemIds": []
     },
     "whyHandmade": {
